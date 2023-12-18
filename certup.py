@@ -1,4 +1,4 @@
-from confile import Confile
+from conson import Conson
 import paramiko
 import os
 import json
@@ -61,11 +61,14 @@ def connection_ok(ip, port, login, pwd):
 
 def select_certfile():
     global certfile
+    global setup
     choosing = True
     files = os.listdir(certdir)
 
+    i = 0
     for file in files:
         print("[{}] - {}".format(files.index(file) + 1, file))
+        i += 1
 
     print(separator)
     print("[c] - powrót\n")
@@ -77,13 +80,14 @@ def select_certfile():
             print(cancel)
             choosing = False
         elif choice.isdigit():
-            if choice in range(1, len(files) + 1):
+            if int(choice) in range(1, len(files) + 1):
                 certfile = files[int(choice) - 1]
+                setup = True
                 choosing = False
             else:
-                print("Spróbuj ponownie.")
+                print(try_again)
         else:
-            print("Spróbuj ponownie.")
+            print(try_again)
 
 
 def get_config():
@@ -95,6 +99,23 @@ def get_config():
         except Exception as err:
             print(err)
             return False
+
+
+def salt_edit():
+    new_salt = input("Wprowadź klucz: ")
+    if new_salt == "":
+        print(cancel)
+    else:
+        data.salt = new_salt
+        return "{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset)
+
+
+def ls_certs():
+    pass
+
+
+def up_certs():
+    pass
 
 
 def target_hosts():
@@ -123,11 +144,24 @@ def target_hosts():
             except Exception as err:
                 print(err)
 
-        def new_pwd():
-
-
     def add_host():
-        pass
+        vrs = {
+            "Nazwa hosta: ": None,
+            "IP: ": None,
+            "Port: ": None,
+            "Login: ": None,
+            "Hasło: ": None,
+            "Komendy do wykonania na hoście\n(każdą komendę oddziel znakiem #): ": []
+        }
+        vrsl = list(vrs)
+
+        for var in vrsl:
+            u_inp = input(var)
+            vrs[var] = u_inp
+        keyy = vrsl[0]
+        values = [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]
+        data.create(keyy=values)
+        data.save()
 
     def edit_host(host_key):
         chooosing = True
@@ -152,12 +186,11 @@ def target_hosts():
 
             if chooice == "c":
                 chooosing = False
-            elif chooice.isdigit() and int(chooice) in range(1, 6) and int(chooice) != 4:
+            elif chooice.isdigit() and int(chooice) in range(1, 6):
                 value[int(chooice) - 1] = new_value(int(chooice) - 1)
-                data.create(host_key=values)
-            elif chooice.isdigit() and int(chooice) == 4:
-                value[int(chooice) - 1] = new_pwd()
-                data.create(host_key=values)
+                if chooice == 4:
+                    data.veil(data()[host_key][3])
+                data.create(host_key=[values])
 
     while choosing:
         print(separator)
@@ -171,8 +204,8 @@ def target_hosts():
             print("Brak zdefiniowanych hostów.")
             print(separator)
 
-        print("[c] - powrót")
         print("[d] - dodaj nowego hosta")
+        print("[c] - powrót")
         if len(data()) != 0:
             print("[{}-{}] - wybierz hosta do edycji".format(1, len(data())))
         choice = input("Wybierz opcję i potwierdź: ")
@@ -185,7 +218,7 @@ def target_hosts():
         elif choice.isdigit() and int(choice) in range(1, len(data()) + 1):
             edit_host(list(data())[int(choice)])
         else:
-            print("Spróbuj ponownie.")
+            print(try_again)
 
 
 # MISC
@@ -197,18 +230,19 @@ reset = "\033[0m"
 welcome = "{} v{} by {}".format(name, version, author)
 separator = "-" * len(welcome)
 cancel = "\n{}POWRÓT...{}".format(blue, reset)
-try_again = "{0}\n{1:^{width}}\n{0}".format(separator, "SPRÓBUJ PONOWNIE", width=len(separator))
+try_again = "\n{}SPRÓBUJ PONOWNIE...{}".format(red, reset)
 
 
 # MAIN
 running = True
-certdir = os.path.join(os.getcwd(), "configs")
+certdir = os.path.join(os.getcwd(), "certs")
 certfile = ""
 certfilefp = os.path.join(certdir, certfile)
-datadir = os.path.join(os.getcwd(), "certs")
+datadir = os.path.join(os.getcwd(), "configs")
 datafile = certfile + ".json"
 datafilefp = os.path.join(datadir, datafile)
-data = Confile(datafile, datadir)
+data = Conson(datafile, datadir)
+fc_set = False
 
 menu = ["Wskaż plik certyfikatu", "Zakończ"]
 
@@ -217,6 +251,7 @@ menu_full = {
     "Zaktualizuj certyfikaty": up_certs,
     "Wskaż plik certyfikatu": select_certfile,
     "Hosty docelowe": target_hosts,
+    "Zmień klucz": salt_edit,
     "Zakończ": None
 }
 
@@ -225,12 +260,14 @@ while running:
     print("{0}\n{1}\n{0}\n".format(separator, welcome))
 
 # sprawdź czy plik jest wybrany, jeśli tak to print OPERUJESZ NA... + usuwanie opcji wyświetl i zaktualizuj
-    if certfile != "":
-        print("\n{}OPERUJESZ NA PLIKU: {}{}\n".format(green, certfile, reset))
+    if certfile != "" and setup:
+        print("{}OPERUJESZ NA PLIKU: {}{}\n".format(green, certfile, reset))
         get_config()
-        menu.insert(0, menu_full[0])
-        menu.insert(1, menu_full[1])
-        menu.insert(3, menu_full[3])
+        menu.insert(0, list(menu_full)[0])
+        menu.insert(1, list(menu_full)[1])
+        menu.insert(3, list(menu_full)[3])
+        menu.insert(4, list(menu_full)[4])
+        setup = False
     else:
         print("\n{}WYBIERZ PLIK CERTYFIKATU{}\n".format(red, reset))
 
@@ -243,4 +280,13 @@ while running:
     for pos in menu:
         print("[{}] - {}".format(menu.index(pos) + 1, pos))
 
-
+    u_in = input("\nWybierz opcję, [Enter] zatwierdza: ")
+    try:
+        if int(u_in) <= 0:
+            raise Exception("input less or equal to 0")
+        elif list(menu_full)[5] == menu[int(u_in) - 1] and u_in != "0":
+            break
+        else:
+            menu_full[menu[int(u_in) - 1]]()
+    except Exception:
+        print(try_again)
