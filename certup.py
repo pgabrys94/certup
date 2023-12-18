@@ -1,6 +1,7 @@
 from conson import Conson
 import paramiko
 import os
+import sys
 import json
 import subprocess
 import time
@@ -31,25 +32,49 @@ class CertUpdate:
         pass
 
 
-############
-########klasa obsługi komunikacji email (????????????)
-class Sender:
-    def __init__(self):
-        pass
-
-# funkcja porównująca ustalony w parametrach termin ważności certyfikatu z obecną datą i wysyłająca powiadomienie
-# email w przypadku: zbliżającego się terminu wygasania + braku nowego certyfikatu w lokalizacji
-# przypisanej do określonego celu
+def share_cert():
+    pass
 
 
-def clean():
+def check_structure():
+    need_restart = False
+    if not os.path.exists(datadir):
+        os.mkdir(datadir)
+        need_restart = True
+    if not os.path.exists(certdir):
+        os.mkdir(certdir)
+        need_restart = True
+    if need_restart:
+        print("Utworzono strukturę katalogów. Umieść plik certyfikatów w folderze 'certs' i uruchom ponownie program.")
+        return True
+
+
+def jdk_present():
+    try:
+        result = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT, text=True).split("\n")
+        for line in result:
+            if "openjdk version" in line:
+                return True
+    except Exception:
+        return False
+
+
+def clean(ex=False):
     system = os.name
 
     if system == "nt":
         os.system("cls")
     else:
         os.system("clear")
+    if not ex:
+        print("{0}\n{1}\n{0}\n".format(separator, welcome))
 
+
+def clean_decor(func):
+    def f(*args, **kwargs):
+        clean()
+        return func(*args, **kwargs)
+    return f
 
 def connection_ok(ip, port, login, pwd):
     global error
@@ -72,6 +97,7 @@ def connection_ok(ip, port, login, pwd):
         return False
 
 
+@clean_decor
 def select_certfile():
     global certfile
     global certdir
@@ -142,8 +168,8 @@ def up_certs():
     pass
 
 
+@clean_decor
 def target_hosts():
-    clean()
     choosing = True
 
     def new_value(val):
@@ -185,7 +211,7 @@ def target_hosts():
 
         for var in vrsl:
             vrs[var] = new_value(var)
-        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
+        values = {"h^" + vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
         data.create(**values)
         data.veil(vrs[vrsl[0]], 3)
         data.save()
@@ -274,10 +300,12 @@ reset = "\033[0m"
 welcome = "{} v{} by {}".format(name, version, author)
 separator = "-" * len(welcome)
 cancel = "\n{}POWRÓT...{}".format(blue, reset)
-try_again = "\n{}SPRÓBUJ PONOWNIE...{}".format(red, reset)
+try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 
 
 # MAIN
+if check_structure():
+    exit()
 
 menu = ["Wskaż plik certyfikatu", "Zakończ"]
 
@@ -285,6 +313,7 @@ menu_full = {
     "Wyświetl certyfikaty i ich daty ważności": ls_certs,
     "Zaktualizuj certyfikaty": up_certs,
     "Wskaż plik certyfikatu": select_certfile,
+    "Eksportuj plik certyfikatu z tego komputera i użyj jako źródło": share_cert,
     "Hosty docelowe": target_hosts,
     "Zmień klucz": salt_edit,
     "Zakończ": None
@@ -292,19 +321,23 @@ menu_full = {
 
 while running:
     clean()
-    print("{0}\n{1}\n{0}\n".format(separator, welcome))
 # sprawdź czy plik jest wybrany, jeśli tak to print OPERUJESZ NA... + usuwanie opcji wyświetl i zaktualizuj
     if certfile is not None:
         print("{}OPERUJESZ NA PLIKU: {}{}".format(green, certfile, reset))
         get_config()
         if setup:
+            menu.pop(menu.index(menu_full[3]))
             menu.insert(0, list(menu_full)[0])
             menu.insert(1, list(menu_full)[1])
-            menu.insert(3, list(menu_full)[3])
-            menu.insert(4, list(menu_full)[4])
+            menu.insert(3, list(menu_full)[4])
+            menu.insert(4, list(menu_full)[5])
         setup = False
     else:
         print("\n{}WYBIERZ PLIK CERTYFIKATU{}\n".format(red, reset))
+        if jdk_present():
+            if list(menu_full)[3] not in menu:
+                menu.insert(1, list(menu_full)[3])
+
 
 # sprawdź czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym, jeśli tak to STATUS POŁĄCZENIA...
     if len(data()) != 0:
@@ -320,8 +353,9 @@ while running:
     try:
         if int(u_in) <= 0:
             raise Exception("input less or equal to 0")
-        elif list(menu_full)[5] == menu[int(u_in) - 1] and u_in != "0":
-            break
+        elif list(menu_full)[6] == menu[int(u_in) - 1] and u_in != "0":
+            clean(True)
+            exit()
         else:
             menu_full[menu[int(u_in) - 1]]()
     except Exception:
