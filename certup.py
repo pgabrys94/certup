@@ -5,23 +5,25 @@ import subprocess
 import shutil
 
 
-name = "CertUp dla DASiUS"
+# Informacje
+name = "CertUp"
 version = 1.0
-author = "PG"
+author = "DASiUS/PG" # https://github.com/pgabrys94
 
-# ZMIENNE:
-running = True
+# Zmienne globalne:
 certdir = os.path.join(os.getcwd(), "certs")
 certfile = ""
 certfilefp = None
 datadir = os.path.join(os.getcwd(), "configs")
 datafile = None
 datafilefp = ""
-data = Conson()
 setup = False
-error = ""
+error = ""  # pozwala na wyświetlenie błędu przy nieosiągalnym hoście docelowym.
 keystore_pwd = ""
 uni_val = ["IP", "Port", "Login", "Hasło", "Komendy"]
+
+# Utworzenie instancji klasy parametrów.
+data = Conson()
 
 #######główna klasa odpowiadająca za przetransportowanie aktualnego skryptu w ustalonym momencie
 class CertUpdate:
@@ -30,6 +32,11 @@ class CertUpdate:
 
 
 def clean(ex=False):
+    """
+    Funkcja czyszcząca okno konsoli podczas poruszania się po interfejsie CLI i wstawiająca nagłówek z nazwą programu.
+    :param ex: Bool -> czy funkcja zostaje wywołana podczas zakończenia programu. PRAWDA: nagłówek nie zostanie dodany.
+    :return:
+    """
     system = os.name
 
     if system == "nt":
@@ -42,6 +49,11 @@ def clean(ex=False):
 
 
 def clean_decor(func):
+    """
+    Dekorator funkcji.
+    :param func: Funkcja
+    :return:
+    """
     def f(*args, **kwargs):
         clean()
         return func(*args, **kwargs)
@@ -50,6 +62,38 @@ def clean_decor(func):
 
 @clean_decor
 def share_cert():
+    """
+    Funkcja eksportu magazynu kluczy z hosta źródłowego.
+    :return:
+    """
+
+    def locate_java_certs():
+        """
+        Funkcja ustalająca ścieżkę magazynu kluczy Java.
+        :return: String or False -> Zwraca kompletną ścieżkę lub FAŁSZ
+        """
+        try:
+            raw_request = subprocess.Popen(
+                ["java", "-XshowSettings:properties", "-version"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+
+            o, e = raw_request.communicate()
+
+            default_dir_structure = r"lib/security/cacerts"
+            for line in e.split("\n"):
+                print(line)
+                if "java.home" in line:
+                    request = line.split("=")[1].strip()
+                    java_cert_path = os.path.join(request, default_dir_structure)
+                    return java_cert_path
+            return False
+        except Exception as er:
+            print(er)
+            return False
+
     global certfile
     global certdir
     global certfilefp
@@ -59,9 +103,8 @@ def share_cert():
     global setup
     global keystore_pwd
 
-    certfile = input("Wprowadź przyjazną nazwę dla pliku certyfikatu: ")
-    keystore_pwd = input("Wprowadź hasło do magazynu kluczy: ")
-    cacfp = os.path.join(r"/etc/ssl/certs/java", "cacerts")
+    certfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
+    keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
 
     certfilefp = os.path.join(certdir, certfile)
     datafile = certfile + ".json"
@@ -69,10 +112,15 @@ def share_cert():
     data.file = datafilefp
     setup = True
     try:
-        if not os.path.exists(cacfp):
-            cacfp = r"{}".format(input("Wprowadź ścieżkę absolutną pliku 'cacerts': "))
+        cacfp = locate_java_certs()
+        if cacfp is False:
+            print("is false")
+            cacfp = r"{}".format(input("Wprowadź ścieżkę absolutną do magazynu kluczy (cacerts): "))
 
-        shutil.copy(cacfp, certfilefp)
+        if not os.path.exists(cacfp):
+            raise Exception("Podany magazyn kluczy nie istnieje.")
+        else:
+            shutil.copy(cacfp, certfilefp)
 
         data.save()
     except Exception as err:
@@ -81,15 +129,26 @@ def share_cert():
 
 @clean_decor
 def ls_certs():
+    """
+    Funkcja menu wyświetlania zawartości magazynu kluczy.
+    :return:
+    """
     global keystore_pwd
     global certfilefp
     choosing = True
-    lsmenu = ["Wyświetl wszystkie nazwy", "Wyświetl datę utworzenia certyfikatu", "Wyświetl certyfikat"]
+    cert_count = 0
 
     try:
 
         output = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
                                           "-storepass", f"{keystore_pwd}", "-rfc"], text=True)
+
+        for line in output.split("\n"):
+            if "contains" in line:
+                cert_count = int(line.split(" ")[3])
+
+        lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})", "Wyświetl datę utworzenia certyfikatu",
+                  "Wyświetl certyfikat"]
 
         while choosing:
             for lspos in lsmenu:
@@ -102,13 +161,13 @@ def ls_certs():
             elif choice.isdigit() and int(choice) in range(1, 4):
                 choice = int(choice) - 1
                 if choice == 0:
-                    print("opt1")
                     result = ""
                     for line in output.split("\n"):
                         if "alias name" in line.lower():
                             result += line[line.index(":") + 1:]
-                    print("wynik: ",result)
-                    pause = input("pause...")
+                    print(result.replace(" ", " | "))
+                    pause = input("\n[enter] - powrót...")
+                    clean()
                 elif choice == 1:
                     print("opt2")
                 elif choice == 2:
@@ -150,6 +209,10 @@ def ls_certs():
 
 
 def check_structure():
+    """
+    Funkcja tworząca strukturę katalogów w przypadku jej braku na hoście źródłowym.
+    :return:
+    """
     need_restart = False
     if not os.path.exists(datadir):
         os.mkdir(datadir)
@@ -163,6 +226,10 @@ def check_structure():
 
 
 def jdk_present():
+    """
+    Funkcja sprawdzająca obecność Java Development Kit w hoście źródłowym.
+    :return:
+    """
     try:
         result = subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT, text=True).split("\n")
         for line in result:
@@ -173,11 +240,19 @@ def jdk_present():
 
 
 def connection_ok(ip, port, login, pwd):
+    """
+    Healthcheck dla połączenia z hostami docelowymi.
+    :param ip: String
+    :param port: String/Int
+    :param login: String
+    :param pwd: String
+    :return:
+    """
     global error
     ssh = paramiko.SSHClient()
     try:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-        ssh.connect(ip, port, login, pwd)
+        ssh.connect(ip, int(port), login, pwd)
 
         transport = ssh.get_transport()
 
@@ -195,6 +270,10 @@ def connection_ok(ip, port, login, pwd):
 
 @clean_decor
 def select_certfile():
+    """
+    Funkcja menu wyboru magazynu kluczy z listy plików w folderze ./certs
+    :return:
+    """
     global certfile
     global certdir
     global certfilefp
@@ -213,7 +292,7 @@ def select_certfile():
     print("[c] - powrót\n")
 
     while choosing:
-        choice = input("Wybierz plik certyfikatów: ")
+        choice = input("Wybierz plik magazynu kluczy: ")
         if choice == "c":
             print(cancel)
             certfile = certfile
@@ -227,7 +306,7 @@ def select_certfile():
                 data.file = datafilefp
                 setup = True
                 choosing = False
-                keystore_pwd = input("Wprowadź hasło do magazynu kluczy: ")
+                keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
             else:
                 print(try_again)
         else:
@@ -235,6 +314,11 @@ def select_certfile():
 
 
 def get_config():
+    """
+    Funkcja wczytująca istniejący plik konfiguracyjny przypisany do certyfikatu LUB tworząca pusty plik
+     w formacie: <nazwa certyfikatu>.json
+    :return:
+    """
     if not os.path.exists(datafilefp):
         data.save()
     else:
@@ -246,7 +330,11 @@ def get_config():
 
 
 def salt_edit():
-    new_salt = input("Wprowadź klucz: ")
+    """
+    Edycja wartości soli kryptograficznej.
+    :return:
+    """
+    new_salt = input("Wprowadź sól (domyślnie: ch4ng3M3pl3453): ")
     if new_salt == "":
         print(cancel)
     else:
@@ -260,10 +348,19 @@ def up_certs():
 
 @clean_decor
 def target_hosts():
+    """
+    Funkcja menu hostów docelowych.
+    :return:
+    """
     choosing = True
 
     @clean_decor
     def new_value(val):
+        """
+        Funkcja dodawania nowej wartości parametru.
+        :param val: String -> wartość właściwa dla określonego parametru.
+        :return:
+        """
         while True:
             changed_to = input("{}".format(val))
             try:
@@ -291,6 +388,10 @@ def target_hosts():
 
     @clean_decor
     def add_host():
+        """
+        Funkcja dodająca nowe hosty docelowe do pliku konfiguracyjnego przypisanego do magazynu kluczy.
+        :return:
+        """
         vrs = {
             "Nazwa hosta: ": None,
             f"{uni_val[0]}: ": None,
@@ -310,11 +411,16 @@ def target_hosts():
 
     @clean_decor
     def edit_host(host_key):
-        chooosing = True
+        """
+        Funkcja edytowania parametrów (wartości) przypisanych do hosta (klucza).
+        :param host_key: String -> klucz odpowiadający przyjaznej nazwie hosta.
+        :return:
+        """
+        choosing_parameter = True
         changed = False
         values = data()[host_key]
 
-        while chooosing:
+        while choosing_parameter:
             print(separator)
             print("Edytowany host: {}".format(host_key))
             print(separator)
@@ -328,20 +434,25 @@ def target_hosts():
             for opt in uni_val:
                 print("[{}] - {}{}".format(uni_val.index(opt) + 1, "Zmień ", opt if opt == uni_val[0] else opt.lower()))
             print("[c] - powrót\n")
-            chooice = input("Wybierz opcję i potwierdź: ")
+            parameter_choice = input("Wybierz opcję i potwierdź: ")
 
-            if chooice == "c":
+            if parameter_choice == "c":
                 if changed:
                     data.save()
-                chooosing = False
-            elif chooice.isdigit() and int(chooice) in range(1, 6):
+                choosing_parameter = False
+            elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 6):
                 changed = True
-                value[int(chooice) - 1] = new_value(uni_val[int(chooice) - 1])
+                value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key=[values])
                 data.veil(data()[host_key][3])
 
     @clean_decor
     def delete_host(host_key):
+        """
+        Usuń dane hosta z konfiguracji.
+        :param host_key: String -> klucz odpowiadający przyjaznej nazwie hosta.
+        :return:
+        """
         print(key)
         data.dispose(host_key)
         data.save()
@@ -385,7 +496,7 @@ def target_hosts():
             print(try_again)
 
 
-# MISC
+# Narzędzia formatowania tekstu
 green = "\033[92m"
 red = "\033[91m"
 blue = "\033[94m"
@@ -397,30 +508,33 @@ cancel = "\n{}POWRÓT...{}".format(blue,  reset)
 try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 
 
-# MAIN
+# Menu główne
 if check_structure():
     exit()
 
-menu = ["Wybierz plik magazynu kluczy", "Zakończ"]
+menu = ["Wybierz plik magazynu kluczy"]
 
 menu_full = {
-    "Wyświetl certyfikaty i daty utworzenia": ls_certs,
-    "Zaktualizuj certyfikaty": up_certs,
+    "Wyświetl certyfikaty": ls_certs,
+    "Zdalnie zaktualizuj magazyny kluczy": up_certs,
     "Wybierz plik magazynu kluczy": select_certfile,
-    "Wykorzystaj lokalny magazyn kluczy": share_cert,
+    "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
     "Hosty docelowe": target_hosts,
-    "Zmień klucz": salt_edit,
-    "Zakończ": None
+    "Zmień klucz": salt_edit
 }
 
+# Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
+running = True
 while running:
     clean()
-# sprawdź czy plik jest wybrany, jeśli tak to print OPERUJESZ NA... + usuwanie opcji wyświetl i zaktualizuj
     if certfile != "":
         print("{}OPERUJESZ NA PLIKU: {}{}".format(green, certfile, reset))
         get_config()
         if setup:
-            menu.pop(menu.index(list(menu_full)[3]))
+            try:
+                menu.pop(menu.index(list(menu_full)[3]))
+            except Exception:
+                pass
             menu.insert(0, list(menu_full)[0])
             menu.insert(1, list(menu_full)[1])
             menu.insert(3, list(menu_full)[4])
@@ -433,7 +547,7 @@ while running:
                 menu.insert(1, list(menu_full)[3])
 
 
-# sprawdź czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym, jeśli tak to STATUS POŁĄCZENIA...
+# Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
     if len(data()) != 0:
         print("\nSTATUS POŁĄCZENIA:\n")
         for k, v in data().items():
@@ -443,14 +557,15 @@ while running:
     print("\n{}".format(separator))
     for pos in menu:
         print("[{}] - {}".format(menu.index(pos) + 1, pos))
+    print("\n[q] - Zakończ")
 
     u_in = input("\nWybierz opcję, [Enter] zatwierdza: ")
     try:
-        if int(u_in) <= 0:
-            raise Exception("input less or equal to 0")
-        elif list(menu_full)[6] == menu[int(u_in) - 1] and u_in != "0":
+        if u_in.isalpha() and u_in.lower() == "q":
             clean(True)
             exit()
+        elif u_in.isdigit() and int(u_in) <= 0:
+            raise Exception("input less or equal to 0")
         else:
             menu_full[menu[int(u_in) - 1]]()
     except Exception:
