@@ -16,11 +16,11 @@ author = "PG"
 # ZMIENNE:
 running = True
 certdir = os.path.join(os.getcwd(), "certs")
-certfile = None
+certfile = ""
 certfilefp = None
 datadir = os.path.join(os.getcwd(), "configs")
 datafile = None
-datafilefp = None
+datafilefp = ""
 data = Conson()
 setup = False
 error = ""
@@ -32,8 +32,51 @@ class CertUpdate:
         pass
 
 
+def clean(ex=False):
+    system = os.name
+
+    if system == "nt":
+        os.system("cls")
+    else:
+        os.system("clear")
+    if not ex:
+        print("{0}\n{1}\n{0}\n".format(separator, welcome))
+
+
+def clean_decor(func):
+    def f(*args, **kwargs):
+        clean()
+        return func(*args, **kwargs)
+    return f
+
+@clean_decor
 def share_cert():
-    pass
+    global certfile
+    global certdir
+    global certfilefp
+    global datafile
+    global datafilefp
+    global setup
+    certfile = input("Wprowadź przyjazną nazwę dla pliku certyfikatu: ")
+    certfilefp = os.path.join(certdir, certfile)
+    datafile = certfile + ".json"
+    datafilefp = os.path.join(datadir, datafile)
+    setup = True
+    cert_dict = {}
+    try:
+        keytool_list = subprocess.check_output(["keytool", "-list", "-cacerts"], text=True).split("\n")
+
+        for line in keytool_list:
+            if "trustedCertEntry" in line:
+                d = line.replace(",", "").split(" ", 4)[1:4]
+                d = f"{d[1]} {d[0]} {d[2]}"
+                cert_dict[(line.split(",", 1)[0])] = [d, None]
+        for alias, vlist in cert_dict.items():
+            cert_dict[alias][1] = subprocess.check_output(["keytool", "-printcert", "-cacerts", "-alias", f"{k}",
+                                                           "-file", f"{certfilefp}", "-rfc"], text=True) ####################################
+        # tmp = subprocess.run(["keytool", "-export", "-keystore", "cacerts", "-file", f"{certfilefp}", "-rfc"])
+    except Exception as err:
+        print(err)
 
 
 def check_structure():
@@ -58,23 +101,6 @@ def jdk_present():
     except Exception:
         return False
 
-
-def clean(ex=False):
-    system = os.name
-
-    if system == "nt":
-        os.system("cls")
-    else:
-        os.system("clear")
-    if not ex:
-        print("{0}\n{1}\n{0}\n".format(separator, welcome))
-
-
-def clean_decor(func):
-    def f(*args, **kwargs):
-        clean()
-        return func(*args, **kwargs)
-    return f
 
 def connection_ok(ip, port, login, pwd):
     global error
@@ -127,7 +153,6 @@ def select_certfile():
             if int(choice) in range(1, len(files) + 1):
                 print(datafile)
                 certfile = files[int(choice) - 1]
-                datafile = certfile + ".json"
                 certfilefp = os.path.join(certdir, certfile)
                 datafile = certfile + ".json"
                 datafilefp = os.path.join(datadir, datafile)
@@ -322,11 +347,11 @@ menu_full = {
 while running:
     clean()
 # sprawdź czy plik jest wybrany, jeśli tak to print OPERUJESZ NA... + usuwanie opcji wyświetl i zaktualizuj
-    if certfile is not None:
+    if certfile != "":
         print("{}OPERUJESZ NA PLIKU: {}{}".format(green, certfile, reset))
         get_config()
         if setup:
-            menu.pop(menu.index(menu_full[3]))
+            menu.pop(menu.index(list(menu_full)[3]))
             menu.insert(0, list(menu_full)[0])
             menu.insert(1, list(menu_full)[1])
             menu.insert(3, list(menu_full)[4])

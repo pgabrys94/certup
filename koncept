@@ -33,4 +33,4 @@ Nazwa pliku ustawień (*.json) musi byc taka sama jak nazwa pliku z certyfikatam
 wtedy tworzy się para plików: certumsigner i certumsigner.json. plik certumsigner z zaktualizowanymi certyfikatami
 będzie w uploadzie zmieniany na cacert
 
-nazwa własna= (ip, port, login, hasło, polecenia oddzielone ^)
+nazwa własna= (ip, port, login, hasło, polecenia oddzielone #)
