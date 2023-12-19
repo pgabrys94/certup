@@ -1,12 +1,8 @@
 from conson import Conson
 import paramiko
 import os
-import sys
-import json
 import subprocess
-import time
-from datetime import datetime as dt
-import jks
+import shutil
 
 
 name = "CertUp dla DASiUS"
@@ -24,6 +20,7 @@ datafilefp = ""
 data = Conson()
 setup = False
 error = ""
+keystore_pwd = ""
 uni_val = ["IP", "Port", "Login", "Hasło", "Komendy"]
 
 #######główna klasa odpowiadająca za przetransportowanie aktualnego skryptu w ustalonym momencie
@@ -41,6 +38,7 @@ def clean(ex=False):
         os.system("clear")
     if not ex:
         print("{0}\n{1}\n{0}\n".format(separator, welcome))
+    return ""
 
 
 def clean_decor(func):
@@ -49,6 +47,7 @@ def clean_decor(func):
         return func(*args, **kwargs)
     return f
 
+
 @clean_decor
 def share_cert():
     global certfile
@@ -56,27 +55,98 @@ def share_cert():
     global certfilefp
     global datafile
     global datafilefp
+    global datadir
     global setup
+    global keystore_pwd
+
     certfile = input("Wprowadź przyjazną nazwę dla pliku certyfikatu: ")
+    keystore_pwd = input("Wprowadź hasło do magazynu kluczy: ")
+    cacfp = os.path.join(r"/etc/ssl/certs/java", "cacerts")
+
     certfilefp = os.path.join(certdir, certfile)
     datafile = certfile + ".json"
     datafilefp = os.path.join(datadir, datafile)
+    data.file = datafilefp
     setup = True
-    cert_dict = {}
     try:
-        keytool_list = subprocess.check_output(["keytool", "-list", "-cacerts"], text=True).split("\n")
+        if not os.path.exists(cacfp):
+            cacfp = r"{}".format(input("Wprowadź ścieżkę absolutną pliku 'cacerts': "))
 
-        for line in keytool_list:
-            if "trustedCertEntry" in line:
-                d = line.replace(",", "").split(" ", 4)[1:4]
-                d = f"{d[1]} {d[0]} {d[2]}"
-                cert_dict[(line.split(",", 1)[0])] = [d, None]
-        for alias, vlist in cert_dict.items():
-            cert_dict[alias][1] = subprocess.check_output(["keytool", "-printcert", "-cacerts", "-alias", f"{k}",
-                                                           "-file", f"{certfilefp}", "-rfc"], text=True) ####################################
-        # tmp = subprocess.run(["keytool", "-export", "-keystore", "cacerts", "-file", f"{certfilefp}", "-rfc"])
+        shutil.copy(cacfp, certfilefp)
+
+        data.save()
     except Exception as err:
         print(err)
+
+
+@clean_decor
+def ls_certs():
+    global keystore_pwd
+    global certfilefp
+    choosing = True
+    lsmenu = ["Wyświetl wszystkie nazwy", "Wyświetl datę utworzenia certyfikatu", "Wyświetl certyfikat"]
+
+    try:
+
+        output = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
+                                          "-storepass", f"{keystore_pwd}", "-rfc"], text=True)
+
+        while choosing:
+            for lspos in lsmenu:
+                print("[{}] - {}".format(lsmenu.index(lspos) + 1, lspos))
+            print("[c] - powrót\n")
+            choice = input("Wybierz opcję i potwierdź: ")
+
+            if choice == "c":
+                choosing = False
+            elif choice.isdigit() and int(choice) in range(1, 4):
+                choice = int(choice) - 1
+                if choice == 0:
+                    print("opt1")
+                    result = ""
+                    for line in output.split("\n"):
+                        if "alias name" in line.lower():
+                            result += line[line.index(":") + 1:]
+                    print("wynik: ",result)
+                    pause = input("pause...")
+                elif choice == 1:
+                    print("opt2")
+                elif choice == 2:
+                    print("opt3")
+            else:
+                print(try_again)
+
+    except Exception as err:
+        print(err)
+################################
+        # specific_certs = input("Wprowadź nazwy kluczowych certyfikatów (separator: ; ): ").replace(" ", "").split(";")
+
+        # cert_dict = {}
+        # all_alias = []
+        #
+        # keytool_list = subprocess.run(["keytool", "-list", "-keystore", f"{certfilefp}", "-storepass",
+        #                 f"{keystore_pwd}", "-rfc", "-file", f"{certfilefp}"])
+
+
+        # for line in keytool_list:
+        #     if "alias name" in line.lower():
+        #         all_alias.append((line.split(":", 1)[1].strip()))
+        #
+        # if len(specific_certs) != 0:
+        #     multialias = ""
+        #     for certname in specific_certs:
+        #         multialias += certname
+        #         if certname in all_alias:
+        #             output = subprocess.check_output(["keytool", "-list", "-cacerts", "-storepass", f"{keystore_pwd}", "-rfc", "-alias", f"{certname}"], text=True).split("\n\n")[1].replace("\n", "")
+        #             cert_dict[certname] = [output[:27], output[27:-25], output[-25:]]
+        # else:
+        #     for alias in all_alias:
+        #         output = subprocess.check_output(["keytool", "-list", "-cacerts", "-storepass", f"{keystore_pwd}", "-rfc", "-alias", f"{alias}"], text=True).split("\n\n")[1].replace("\n", "")
+        #         cert_dict[alias] = [output[:27], output[27:-25], output[-25:]]
+        # print(cert_dict)
+        # cert1 = cert_dict[list(cert_dict)[0]]
+        # print(cert1)
+        # input("wait")
 
 
 def check_structure():
@@ -131,9 +201,9 @@ def select_certfile():
     global datafile
     global datafilefp
     global setup
+    global keystore_pwd
     choosing = True
     files = os.listdir(certdir)
-
     i = 0
     for file in files:
         print("[{}] - {}".format(files.index(file) + 1, file))
@@ -144,14 +214,12 @@ def select_certfile():
 
     while choosing:
         choice = input("Wybierz plik certyfikatów: ")
-
         if choice == "c":
             print(cancel)
             certfile = certfile
             choosing = False
         elif choice.isdigit():
             if int(choice) in range(1, len(files) + 1):
-                print(datafile)
                 certfile = files[int(choice) - 1]
                 certfilefp = os.path.join(certdir, certfile)
                 datafile = certfile + ".json"
@@ -159,6 +227,7 @@ def select_certfile():
                 data.file = datafilefp
                 setup = True
                 choosing = False
+                keystore_pwd = input("Wprowadź hasło do magazynu kluczy: ")
             else:
                 print(try_again)
         else:
@@ -185,10 +254,6 @@ def salt_edit():
         return "{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset)
 
 
-def ls_certs():
-    pass
-
-
 def up_certs():
     pass
 
@@ -197,6 +262,7 @@ def up_certs():
 def target_hosts():
     choosing = True
 
+    @clean_decor
     def new_value(val):
         while True:
             changed_to = input("{}".format(val))
@@ -223,6 +289,7 @@ def target_hosts():
             except Exception as err:
                 print(err)
 
+    @clean_decor
     def add_host():
         vrs = {
             "Nazwa hosta: ": None,
@@ -241,6 +308,7 @@ def target_hosts():
         data.veil(vrs[vrsl[0]], 3)
         data.save()
 
+    @clean_decor
     def edit_host(host_key):
         chooosing = True
         changed = False
@@ -272,6 +340,7 @@ def target_hosts():
                 data.create(host_key=[values])
                 data.veil(data()[host_key][3])
 
+    @clean_decor
     def delete_host(host_key):
         print(key)
         data.dispose(host_key)
@@ -324,7 +393,7 @@ yellow = "\033[93m"
 reset = "\033[0m"
 welcome = "{} v{} by {}".format(name, version, author)
 separator = "-" * len(welcome)
-cancel = "\n{}POWRÓT...{}".format(blue, reset)
+cancel = "\n{}POWRÓT...{}".format(blue,  reset)
 try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 
 
@@ -332,13 +401,13 @@ try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 if check_structure():
     exit()
 
-menu = ["Wskaż plik certyfikatu", "Zakończ"]
+menu = ["Wybierz plik magazynu kluczy", "Zakończ"]
 
 menu_full = {
-    "Wyświetl certyfikaty i ich daty ważności": ls_certs,
+    "Wyświetl certyfikaty i daty utworzenia": ls_certs,
     "Zaktualizuj certyfikaty": up_certs,
-    "Wskaż plik certyfikatu": select_certfile,
-    "Eksportuj plik certyfikatu z tego komputera i użyj jako źródło": share_cert,
+    "Wybierz plik magazynu kluczy": select_certfile,
+    "Wykorzystaj lokalny magazyn kluczy": share_cert,
     "Hosty docelowe": target_hosts,
     "Zmień klucz": salt_edit,
     "Zakończ": None
@@ -368,7 +437,8 @@ while running:
     if len(data()) != 0:
         print("\nSTATUS POŁĄCZENIA:\n")
         for k, v in data().items():
-            print("{}{} {} {}{}".format(green if connection_ok(v[0], v[1], v[2], v[3]) else red, k, "-" if error != "" else "", error.strip(), reset))
+            print("{}{} {} {}{}".format(green if connection_ok(v[0], v[1], v[2], v[3]) else red,
+                                        k, "-" if error != "" else "", error.strip(), reset))
 
     print("\n{}".format(separator))
     for pos in menu:
