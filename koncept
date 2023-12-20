@@ -4,7 +4,7 @@
  STATUS POŁĄCZENIA:
  <hosty docelowe><POŁĄCZONO/BŁĄD>
 
- 0.1 Wyświetl certyfikaty (odczyt z configa)
+# 0.1 Wyświetl certyfikaty
  0.2 Zaktualizuj certyfikaty w pliku
    0.2.1 Wykonaj automatycznie (OKREŚLIĆ ID CERRTYFIKATU W PROGRAMIE i odgórne nazewnictwo plików z certyfikatem do wgrania)
    0.2.2 Wybierz ręcznie

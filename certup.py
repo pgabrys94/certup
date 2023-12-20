@@ -4,11 +4,10 @@ import os
 import subprocess
 import shutil
 
-
 # Informacje
 name = "CertUp"
 version = 1.0
-author = "DASiUS/PG" # https://github.com/pgabrys94
+author = "DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
 certdir = os.path.join(os.getcwd(), "certs")
@@ -105,6 +104,7 @@ def share_cert():
 
     certfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
     keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
+    keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
 
     certfilefp = os.path.join(certdir, certfile)
     datafile = certfile + ".json"
@@ -133,6 +133,80 @@ def ls_certs():
     Funkcja menu wyświetlania zawartości magazynu kluczy.
     :return:
     """
+
+    def print_aliases(output):
+        """
+        Wyświetl wszystie aliasy w magazynie kluczy.
+        :param output: Rezultat zapytania o zawartość magazynu w rfc.
+        :return:
+        """
+        result = ""
+        for ln in output.split("\n"):
+            if "alias name" in ln.lower():
+                result += ln[ln.index(":") + 1:]
+        print(result.replace(" ", " | "))
+        input("\n[enter] - powrót...")
+        clean()
+
+    def print_certdate(output):
+        """
+        Wyświetl datę zaimportowania wskazanego certyfikatu do obecnego magazynu kluczy.
+        :param output: Rezultat zapytania o zawartość magazynu BEZ rfc.
+        :return:
+        """
+        uin = input("Podaj alias certyfikatu ([enter] - powrót): ")
+
+        if len(uin) == 0:
+            clean()
+            return
+        elif len(uin) > 0:
+            for ln in output.split("\n"):
+                if uin in ln.lower():
+                    print(ln.split(",")[1].strip())
+                    input("\n[enter] - powrót...")
+                    clean()
+                    return
+
+        if len(uin) > 0:
+            print("Nie znaleziono podanego aliasu.")
+            input("\n[enter] - powrót...")
+            clean()
+
+    def print_certificate():
+        """
+        Wyświetl klucz certyfikatu.
+        :return:
+        """
+        try:
+            uin = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
+
+            if len(uin) > 0:
+                try:
+                    cert_query = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
+                                                          "-storepass", f"{keystore_pwd}", "-alias", f"{uin}", "-rfc"],
+                                                         text=True)
+
+                    i = 3
+                    if uin in cert_query.split("\n")[0]:
+                        for ln in cert_query.split("\n"):
+                            i -= 1
+                            if i <= 0:
+                                print(ln)
+                        input("\n[enter] - powrót...")
+                        clean()
+                        return
+                except Exception:
+                    print("Nie znaleziono podanego aliasu.")
+                    input("\n[enter] - powrót...")
+                    clean()
+                    return
+            else:
+                clean()
+                return
+        except Exception:
+            clean()
+            print(try_again)
+
     global keystore_pwd
     global certfilefp
     choosing = True
@@ -140,10 +214,13 @@ def ls_certs():
 
     try:
 
-        output = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
-                                          "-storepass", f"{keystore_pwd}", "-rfc"], text=True)
+        query = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}", "-storepass",
+                                         f"{keystore_pwd}", "-rfc"], text=True)
 
-        for line in output.split("\n"):
+        simple_query = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
+                                                "-storepass", f"{keystore_pwd}"], text=True)
+
+        for line in query.split("\n"):
             if "contains" in line:
                 cert_count = int(line.split(" ")[3])
 
@@ -161,51 +238,17 @@ def ls_certs():
             elif choice.isdigit() and int(choice) in range(1, 4):
                 choice = int(choice) - 1
                 if choice == 0:
-                    result = ""
-                    for line in output.split("\n"):
-                        if "alias name" in line.lower():
-                            result += line[line.index(":") + 1:]
-                    print(result.replace(" ", " | "))
-                    pause = input("\n[enter] - powrót...")
-                    clean()
+                    print_aliases(query)
                 elif choice == 1:
-                    print("opt2")
+                    print_certdate(simple_query)
                 elif choice == 2:
-                    print("opt3")
+                    print_certificate()
             else:
+                clean()
                 print(try_again)
 
     except Exception as err:
         print(err)
-################################
-        # specific_certs = input("Wprowadź nazwy kluczowych certyfikatów (separator: ; ): ").replace(" ", "").split(";")
-
-        # cert_dict = {}
-        # all_alias = []
-        #
-        # keytool_list = subprocess.run(["keytool", "-list", "-keystore", f"{certfilefp}", "-storepass",
-        #                 f"{keystore_pwd}", "-rfc", "-file", f"{certfilefp}"])
-
-
-        # for line in keytool_list:
-        #     if "alias name" in line.lower():
-        #         all_alias.append((line.split(":", 1)[1].strip()))
-        #
-        # if len(specific_certs) != 0:
-        #     multialias = ""
-        #     for certname in specific_certs:
-        #         multialias += certname
-        #         if certname in all_alias:
-        #             output = subprocess.check_output(["keytool", "-list", "-cacerts", "-storepass", f"{keystore_pwd}", "-rfc", "-alias", f"{certname}"], text=True).split("\n\n")[1].replace("\n", "")
-        #             cert_dict[certname] = [output[:27], output[27:-25], output[-25:]]
-        # else:
-        #     for alias in all_alias:
-        #         output = subprocess.check_output(["keytool", "-list", "-cacerts", "-storepass", f"{keystore_pwd}", "-rfc", "-alias", f"{alias}"], text=True).split("\n\n")[1].replace("\n", "")
-        #         cert_dict[alias] = [output[:27], output[27:-25], output[-25:]]
-        # print(cert_dict)
-        # cert1 = cert_dict[list(cert_dict)[0]]
-        # print(cert1)
-        # input("wait")
 
 
 def check_structure():
@@ -263,13 +306,13 @@ def connection_ok(ip, port, login, pwd):
             ssh.close()
             return False
     except Exception as err:
-        error = str(err).split("]")[1]
+        error = err
         ssh.close()
         return False
 
 
 @clean_decor
-def select_certfile():
+def select_keystore():
     """
     Funkcja menu wyboru magazynu kluczy z listy plików w folderze ./certs
     :return:
@@ -283,17 +326,19 @@ def select_certfile():
     global keystore_pwd
     choosing = True
     files = os.listdir(certdir)
-    i = 0
-    for file in files:
-        print("[{}] - {}".format(files.index(file) + 1, file))
-        i += 1
-
-    print(separator)
-    print("[c] - powrót\n")
 
     while choosing:
+        i = 0
+        for file in files:
+            print("[{}] - {}".format(files.index(file) + 1, file))
+            i += 1
+
+        print(separator)
+        print("[c] - powrót\n")
+
         choice = input("Wybierz plik magazynu kluczy: ")
         if choice == "c":
+            clean()
             print(cancel)
             certfile = certfile
             choosing = False
@@ -307,9 +352,12 @@ def select_certfile():
                 setup = True
                 choosing = False
                 keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
+                keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
             else:
+                clean()
                 print(try_again)
         else:
+            clean()
             print(try_again)
 
 
@@ -336,6 +384,7 @@ def salt_edit():
     """
     new_salt = input("Wprowadź sól (domyślnie: ch4ng3M3pl3453): ")
     if new_salt == "":
+        clean()
         print(cancel)
     else:
         data.salt = new_salt
@@ -404,8 +453,8 @@ def target_hosts():
 
         for var in vrsl:
             vrs[var] = new_value(var)
-        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
-        data.create(**values)
+        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}     #tutaj pokombinowac
+        data.create(vrs[vrsl[0]], values[vrs[vrsl[0]]])
         data.veil(vrs[vrsl[0]], 3)
         data.save()
 
@@ -443,7 +492,7 @@ def target_hosts():
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 6):
                 changed = True
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
-                data.create(host_key=[values])
+                data.create(host_key, values)
                 data.veil(data()[host_key][3])
 
     @clean_decor
@@ -468,17 +517,22 @@ def target_hosts():
             print(separator)
         else:
             print("Brak zdefiniowanych hostów.")
+            print("Uwaga: ustaw parametr soli przed definiowaniem hostów.")
             print(separator)
 
         if len(data()) != 0:
             print("[{}-{}] - wybierz hosta do edycji".format(1, len(data())))
             print("[d] + [{}-{}] - usuń hosta".format(1, len(data())))
         print("[a] - dodaj nowego hosta")
+        print("[s] - zmień sól")
         print("[c] - powrót\n")
         choice = input("Wybierz opcję i potwierdź: ")
         if choice == "c":
+            clean()
             print(cancel)
             choosing = False
+        if choice == "s":
+            salt_edit()
         elif choice == "a":
             add_host()
         elif "d" in choice:
@@ -489,10 +543,12 @@ def target_hosts():
                         number += x
                 delete_host(list(data())[int(number) - 1])
             except Exception:
+                clean()
                 print(try_again)
         elif choice.isdigit() and int(choice) in range(1, len(data()) + 1):
             edit_host(list(data())[int(choice) - 1])
         else:
+            clean()
             print(try_again)
 
 
@@ -517,7 +573,7 @@ menu = ["Wybierz plik magazynu kluczy"]
 menu_full = {
     "Wyświetl certyfikaty": ls_certs,
     "Zdalnie zaktualizuj magazyny kluczy": up_certs,
-    "Wybierz plik magazynu kluczy": select_certfile,
+    "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
     "Hosty docelowe": target_hosts,
     "Zmień klucz": salt_edit
@@ -551,8 +607,14 @@ while running:
     if len(data()) != 0:
         print("\nSTATUS POŁĄCZENIA:\n")
         for k, v in data().items():
-            print("{}{} {} {}{}".format(green if connection_ok(v[0], v[1], v[2], v[3]) else red,
-                                        k, "-" if error != "" else "", error.strip(), reset))
+            cstatus = connection_ok(v[0], v[1], v[2], data.unveil(v[3]))
+            if cstatus:
+                print("{}{}{} {}{}".format(green,k, reset)   ##############tutaj poprawić
+            elif not cstatus:
+
+
+            print("{}{} {} {}{}".format(green if cstatus else red,
+                                        k, "-" if cstatus != "" else "", error, reset))
 
     print("\n{}".format(separator))
     for pos in menu:
@@ -569,4 +631,5 @@ while running:
         else:
             menu_full[menu[int(u_in) - 1]]()
     except Exception:
+        clean()
         print(try_again)
