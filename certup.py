@@ -404,7 +404,7 @@ def target_hosts():
 
         for var in vrsl:
             vrs[var] = new_value(var)
-        values = {"h^" + vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
+        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
         data.create(**values)
         data.veil(vrs[vrsl[0]], 3)
         data.save()
