@@ -886,7 +886,7 @@ while running:
         print("Odpytywanie hostów...", end="")
         for k in list(data()):
             connection_ok(k)
-        print("\r" + " " * 20)
+        print("\r" + " " * 30)
         print("\nSTATUS POŁĄCZENIA:\n")
         for k in list(data()):
             print("{}{} {} {}{}".format(green if conn_status[k] else red,
