@@ -3,6 +3,7 @@ import paramiko
 import os
 import subprocess
 import shutil
+import time
 
 # Informacje
 name = "CertUp"
@@ -24,10 +25,85 @@ uni_val = ["IP", "Port", "Login", "Hasło", "Komendy"]
 # Utworzenie instancji klasy parametrów.
 data = Conson()
 
-#######główna klasa odpowiadająca za przetransportowanie aktualnego skryptu w ustalonym momencie
-class CertUpdate:
-    def __init__(self):
-        pass
+
+class Remote:
+    def __init__(self, ip, port, login, pwd, command_list, verbose=False):
+        self.ip = ip
+        self.port = port
+        self.login = login
+        self.pwd = pwd
+        self.commands = [command.strip() for command in command_list.split("#") if command]
+        self.terminal = paramiko.SSHClient()
+        self.path = os.path.join("/", "home", self.login, "certup") if self.login != "root"\
+            else os.path.join("/", "root", "certup")
+        self.backup_path = os.path.join(self.path, "backup")
+        self.verbose = verbose
+        self.file = "cacerts"
+
+    def connect(self):
+        try:
+            self.terminal.set_missing_host_key_policy(paramiko.AutoAddPolicy)
+            self.terminal.connect(self.ip, port=self.port, username=self.login, password=self.pwd)
+            if self.verbose:
+                print("\n{}POŁĄCZONO{}".format(green, reset))
+        except Exception as err:
+            if self.verbose:
+                print("{}BŁĄD POŁĄCZENIA{}: {}".format(red, reset, err))
+
+    def disconnect(self):
+        self.terminal.close()
+        if self.verbose:
+            print("{}ROZŁĄCZONO{}".format(green, reset))
+
+    def create_tree(self):
+        with self.terminal.open_sftp() as sftp:
+            try:
+                sftp.stat(self.path)
+                print("{}Struktura katalogów już istnieje.{}".format(blue, reset))
+            except Exception:
+                print("Tworzenie struktury katalogów...")
+                try:
+                    sftp.mkdir(self.path)
+                except Exception as err:
+                    print("{}Błąd tworzenia struktury katalogów: {}".format(red, reset), err)
+
+    def import_jks(self, srcpwd, destpwd):
+        command = (f"keytool -importkeystore -deststorepass {destpwd} -trustcacerts -srckeystore"
+                   f" {os.path.join(self.path, self.file)} -srcstorepass {srcpwd} -noprompt")
+        if self.verbose:
+            print("Importowanie magazynu kluczy...")
+        try:
+            self.terminal.exec_command(command)
+            if self.verbose:
+                print("{}Zaimportowano magazyn kluczy.{}".format(green, reset))
+        except Exception as err:
+            if self.verbose:
+                print("{}Błąd importowania magazynu kluczy: {}".format(red, reset), err)
+
+    def run(self):
+        if self.commands:
+            for command in self.commands:
+                try:
+                    if self.verbose:
+                        print("Wykonywanie komendy: {}".format(command))
+                    self.terminal.exec_command(command)
+                    time.sleep(1)
+                except Exception as err:
+                    if self.verbose:
+                        print("{}Błąd komendy: {}{}: {}".format(red, reset, command, err))
+
+    def upload(self, file):
+        try:
+            if self.verbose:
+                print("Wysyłanie...")
+            sftp = self.terminal.open_sftp()
+            sftp.put(file, os.path.join(self.path, self.file))
+            sftp.close()
+            if self.verbose:
+                print("{}Wysłano: {}:{}{}".format(green, self.ip, os.path.join(self.path, self.file), reset))
+        except Exception as err:
+            if self.verbose:
+                print("{}Błąd wysyłania{}: {}".format(red, reset, err))
 
 
 def clean(ex=False):
@@ -57,6 +133,96 @@ def clean_decor(func):
         clean()
         return func(*args, **kwargs)
     return f
+
+
+@clean_decor
+def up_certs():
+    def execute(target):
+        target.connect()
+        target.create_tree()
+        target.upload(certfilefp)
+        target.import_jks(keystore_pwd, keystore_pwd)
+        target.run()
+        target.disconnect()
+        return
+
+    def up_single(host):  # Wgraj na pojedyńczego hosta
+        target = Remote(data()[host][0], data()[host][1], data()[host][2],
+                        data.unveil(data()[host][3]), data()[host][4], True)
+
+        execute(target)
+        input("\n[enter] - kontynuuuj...")
+        return
+
+    @clean_decor
+    def up_all():  # Wgraj na wszystkie hosty
+        try:
+            for key, value in data().items():
+                if connection_ok(value[0], value[1], value[2], data.unveil(value[3])):
+                    target = Remote(value[0], value[1], value[2], data.unveil(value[3]), value[4], True)
+
+                    execute(target)
+
+            input("\n[enter] - kontynuuuj...")
+            return
+        except Exception as err:
+            clean()
+            return
+
+    @clean_decor
+    def choose_target():
+        choosing_host = True
+        while choosing_host:
+            print(separator)
+            print("Hosty docelowe:")
+            print(separator)
+
+            printed_hosts = 0
+            if len(data()) != 0:
+                for key, value in data().items():
+                    if connection_ok(value[0], value[1], value[2], data.unveil(value[3])):
+                        printed_hosts += 1
+                        print("[{}] - {} [{}:{}] - {}"
+                              .format(printed_hosts, key, value[0], value[1], value[2]))
+                print(separator)
+            else:
+                print("Brak zdefiniowanych hostów.")
+                print(separator)
+
+            if printed_hosts > 0:
+                print("[{}-{}] - wybierz hosta".format(1, printed_hosts))
+            print("[c] - powrót\n")
+            choice = input("Wybierz opcję i potwierdź: ")
+
+            if choice == "c":
+                clean()
+                choosing_host = False
+            elif choice.isdigit() and int(choice) in range(1, len(data()) + 1):
+                up_single(list(data())[int(choice) - 1])
+            else:
+                clean()
+                print(try_again)
+
+    options = {"Wgraj na pojedyńczego hosta": choose_target, "Wgraj na wszystkie zdefiniowane hosty": up_all}
+    choosing = True
+    while choosing:
+        for opt in options:
+            print("[{}] - {}".format(list(options).index(opt) + 1, opt))
+        print("\n[c] - powrót")
+
+        uin = input("\nWybierz opcję, [Enter] zatwierdza: ")
+        try:
+            if uin.lower() == "c":
+                clean()
+                choosing = False
+                return
+            elif uin.isdigit() and int(uin) <= 0:
+                raise Exception("input less or equal to 0")
+            else:
+                options[list(options)[int(uin) - 1]]()
+        except Exception:
+            clean()
+            print(try_again)
 
 
 @clean_decor
@@ -230,7 +396,7 @@ def ls_certs():
         while choosing:
             for lspos in lsmenu:
                 print("[{}] - {}".format(lsmenu.index(lspos) + 1, lspos))
-            print("[c] - powrót\n")
+            print("\n[c] - powrót\n")
             choice = input("Wybierz opcję i potwierdź: ")
 
             if choice == "c":
@@ -292,6 +458,7 @@ def connection_ok(ip, port, login, pwd):
     :return:
     """
     global error
+    error = ""
     ssh = paramiko.SSHClient()
     try:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
@@ -306,7 +473,7 @@ def connection_ok(ip, port, login, pwd):
             ssh.close()
             return False
     except Exception as err:
-        error = err
+        error = str(err)
         ssh.close()
         return False
 
@@ -391,10 +558,6 @@ def salt_edit():
         return "{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset)
 
 
-def up_certs():
-    pass
-
-
 @clean_decor
 def target_hosts():
     """
@@ -453,7 +616,7 @@ def target_hosts():
 
         for var in vrsl:
             vrs[var] = new_value(var)
-        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}     #tutaj pokombinowac
+        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
         data.create(vrs[vrsl[0]], values[vrs[vrsl[0]]])
         data.veil(vrs[vrsl[0]], 3)
         data.save()
@@ -489,11 +652,13 @@ def target_hosts():
                 if changed:
                     data.save()
                 choosing_parameter = False
+                clean()
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 6):
                 changed = True
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key, values)
                 data.veil(data()[host_key][3])
+                clean()
 
     @clean_decor
     def delete_host(host_key):
@@ -517,7 +682,7 @@ def target_hosts():
             print(separator)
         else:
             print("Brak zdefiniowanych hostów.")
-            print("Uwaga: ustaw parametr soli przed definiowaniem hostów.")
+            print("Uwaga: ustaw wartość soli przed definiowaniem hostów.")
             print(separator)
 
         if len(data()) != 0:
@@ -572,7 +737,7 @@ menu = ["Wybierz plik magazynu kluczy"]
 
 menu_full = {
     "Wyświetl certyfikaty": ls_certs,
-    "Zdalnie zaktualizuj magazyny kluczy": up_certs,
+    "Wykonaj zdalną aktualizację magazynów kluczy": up_certs,
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
     "Hosty docelowe": target_hosts,
@@ -607,14 +772,8 @@ while running:
     if len(data()) != 0:
         print("\nSTATUS POŁĄCZENIA:\n")
         for k, v in data().items():
-            cstatus = connection_ok(v[0], v[1], v[2], data.unveil(v[3]))
-            if cstatus:
-                print("{}{}{} {}{}".format(green,k, reset)   ##############tutaj poprawić
-            elif not cstatus:
-
-
-            print("{}{} {} {}{}".format(green if cstatus else red,
-                                        k, "-" if cstatus != "" else "", error, reset))
+            print("{}{} {} {}{}".format(green if connection_ok(v[0], v[1], v[2], data.unveil(v[3])) else red,
+                                        k, "-" if len(error) != 0 else "", error, reset))
 
     print("\n{}".format(separator))
     for pos in menu:
