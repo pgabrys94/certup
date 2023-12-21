@@ -888,7 +888,7 @@ while running:
             connection_ok(k)
         print("\r" + " " * 20)
         print("\nSTATUS POŁĄCZENIA:\n")
-        for k, v in list(data()):
+        for k in list(data()):
             print("{}{} {} {}{}".format(green if conn_status[k] else red,
                                         k, "-" if len(error) != 0 else "", error, reset))
 
