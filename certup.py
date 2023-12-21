@@ -1,15 +1,12 @@
-import sys
-import os
-import subprocess
-import shutil
-import time
-
-
 def in_req():
     """
     Funkcja sprawdzająca obecność wymaganych modułów spoza standardowej biblioteki pythona.
     :return:
     """
+    import sys
+    import os
+    import subprocess
+
     try:
         from conson import Conson
         import paramiko
@@ -32,6 +29,15 @@ def in_req():
 
 
 in_req()
+
+import os
+import subprocess
+import shutil
+import time
+import paramiko
+from conson import Conson
+import jks
+
 
 # Informacje
 name = "CertUp"
@@ -241,7 +247,7 @@ def up_certs():
             printed_hosts = 0
             if len(data()) != 0:
                 for key, value in data().items():
-                    if conn_status[k]:
+                    if conn_status[key]:
                         printed_hosts += 1
                         print("[{}] - {} [{}:{}] - {}"
                               .format(printed_hosts, key, value[0], value[1], value[2]))
@@ -480,7 +486,6 @@ def ls_certs():
 ###############################Funkcja eksperymentalna, wyklucza potrzebę posiadania jdk na hoście źródłowym############
 @clean_decor
 def ls_certs_pyjks():
-    import jks
     global keystore_pwd
     global certfilefp
 
