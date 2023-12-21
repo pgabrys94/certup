@@ -843,73 +843,69 @@ try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 
 
 # Menu główne
-def main():
-    if check_structure():
-        exit()
+if check_structure():
+    exit()
 
-    menu = ["Wybierz plik magazynu kluczy"]
+menu = ["Wybierz plik magazynu kluczy"]
 
-    menu_full = {
-        "Wyświetl certyfikaty": ls_certs,
-        "Wykonaj zdalną aktualizację magazynów kluczy": up_certs,
-        "Wybierz plik magazynu kluczy": select_keystore,
-        "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
-        "Hosty docelowe": target_hosts,
-        "Zmień klucz": salt_edit
-    }
+menu_full = {
+    "Wyświetl certyfikaty": ls_certs,
+    "Wykonaj zdalną aktualizację magazynów kluczy": up_certs,
+    "Wybierz plik magazynu kluczy": select_keystore,
+    "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
+    "Hosty docelowe": target_hosts,
+    "Zmień klucz": salt_edit
+}
 
-    # Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
-    running = True
-    while running:
-        clean()
-        if certfile != "":
-            print("{}OPERUJESZ NA PLIKU: {}{}".format(green, certfile, reset))
-            get_config()
-            if setup:
-                try:
-                    menu.pop(menu.index(list(menu_full)[3]))
-                except Exception:
-                    pass
-                menu.insert(0, list(menu_full)[0])
-                menu.insert(1, list(menu_full)[1])
-                menu.insert(3, list(menu_full)[4])
-                menu.insert(4, list(menu_full)[5])
-            setup = False
+# Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
+running = True
+while running:
+    clean()
+    if certfile != "":
+        print("{}OPERUJESZ NA PLIKU: {}{}".format(green, certfile, reset))
+        get_config()
+        if setup:
+            try:
+                menu.pop(menu.index(list(menu_full)[3]))
+            except Exception:
+                pass
+            menu.insert(0, list(menu_full)[0])
+            menu.insert(1, list(menu_full)[1])
+            menu.insert(3, list(menu_full)[4])
+            menu.insert(4, list(menu_full)[5])
+        setup = False
+    else:
+        print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
+        if jdk_present():
+            if list(menu_full)[3] not in menu:
+                menu.insert(1, list(menu_full)[3])
+
+
+# Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
+    if len(data()) != 0:
+        print("Odpytywanie hostów...", end="")
+        for k in list(data()):
+            connection_ok(k)
+        print("\r" + " " * 20)
+        print("\nSTATUS POŁĄCZENIA:\n")
+        for k, v in list(data()):
+            print("{}{} {} {}{}".format(green if conn_status[k] else red,
+                                        k, "-" if len(error) != 0 else "", error, reset))
+
+    print("\n{}".format(separator))
+    for pos in menu:
+        print("[{}] - {}".format(menu.index(pos) + 1, pos))
+    print("\n[q] - Zakończ")
+
+    u_in = input("\nWybierz opcję, [Enter] zatwierdza: ")
+    try:
+        if u_in.isalpha() and u_in.lower() == "q":
+            clean(True)
+            exit()
+        elif u_in.isdigit() and int(u_in) <= 0:
+            raise Exception("input less or equal to 0")
         else:
-            print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
-            if jdk_present():
-                if list(menu_full)[3] not in menu:
-                    menu.insert(1, list(menu_full)[3])
-
-
-    # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
-        if len(data()) != 0:
-            print("Odpytywanie hostów...", end="")
-            for k in list(data()):
-                connection_ok(k)
-            print("\r" + " " * 20)
-            print("\nSTATUS POŁĄCZENIA:\n")
-            for k, v in list(data()):
-                print("{}{} {} {}{}".format(green if conn_status[k] else red,
-                                            k, "-" if len(error) != 0 else "", error, reset))
-
-        print("\n{}".format(separator))
-        for pos in menu:
-            print("[{}] - {}".format(menu.index(pos) + 1, pos))
-        print("\n[q] - Zakończ")
-
-        u_in = input("\nWybierz opcję, [Enter] zatwierdza: ")
-        try:
-            if u_in.isalpha() and u_in.lower() == "q":
-                clean(True)
-                exit()
-            elif u_in.isdigit() and int(u_in) <= 0:
-                raise Exception("input less or equal to 0")
-            else:
-                menu_full[menu[int(u_in) - 1]]()
-        except Exception:
-            clean()
-            print(try_again)
-
-
-main()
+            menu_full[menu[int(u_in) - 1]]()
+    except Exception:
+        clean()
+        print(try_again)
