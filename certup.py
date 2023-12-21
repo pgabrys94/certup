@@ -28,6 +28,10 @@ data = Conson()
 
 
 class Remote:
+    """
+    Klasa tworząca obiekty do manipulacji zdalnym hostem. Atrybutami instancji takiej klasy są dane zawarte
+    w słowniku parametrów instancji conson.
+    """
     def __init__(self, hostname, ip, port, login, pwd, command_list, verbose=False):
         self.hostname = hostname
         self.ip = ip
@@ -43,6 +47,10 @@ class Remote:
         self.file = "cacerts"
 
     def connect(self):
+        """
+        Funkcja otwierająca połączenie SSH pomiędzy hostem źródłowym a docelowym.
+        :return:
+        """
         try:
             self.terminal.set_missing_host_key_policy(paramiko.AutoAddPolicy)
             self.terminal.connect(self.ip, port=self.port, username=self.login, password=self.pwd)
@@ -53,11 +61,19 @@ class Remote:
                 print("{}BŁĄD POŁĄCZENIA z {}{}: {}".format(red, self.hostname, reset, err))
 
     def disconnect(self):
+        """
+        Zamykanie połączenia między hostami.
+        :return:
+        """
         self.terminal.close()
         if self.verbose:
             print("{}ROZŁĄCZONO z {}{}".format(green, self.hostname, reset))
 
     def create_tree(self):
+        """
+        Funkcja tworząca strukturę katalogów na hoście docelowym.
+        :return:
+        """
         with self.terminal.open_sftp() as sftp:
             try:
                 sftp.stat(self.path)
@@ -70,6 +86,12 @@ class Remote:
                     print("{}Błąd tworzenia struktury katalogów: {}".format(red, reset), err)
 
     def import_jks(self, srcpwd, destpwd):
+        """
+        Funkcja wykonująca komendę importowania przesłanego magazynu kluczy do lokalnego magazynu na hoście docelowym.
+        :param srcpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
+        :param destpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
+        :return:
+        """
         command = (f"keytool -importkeystore -deststorepass {destpwd} -trustcacerts -srckeystore"
                    f" {os.path.join(self.path, self.file)} -srcstorepass {srcpwd} -noprompt")
         if self.verbose:
@@ -83,6 +105,10 @@ class Remote:
                 print("{}Błąd importowania magazynu kluczy: {}".format(red, reset), err)
 
     def run(self):
+        """
+        Funkcja wykonywania komend na hoście zdalnym.
+        :return:
+        """
         if self.commands:
             for command in self.commands:
                 try:
@@ -95,6 +121,11 @@ class Remote:
                         print("{}Błąd komendy: {}{}: {}".format(red, reset, command, err))
 
     def upload(self, file):
+        """
+        Funkcja odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego.
+        :param file: Pełna ścieżka do pliku magazynu kluczy.
+        :return:
+        """
         try:
             if self.verbose:
                 print("Wysyłanie...")
@@ -418,7 +449,85 @@ def ls_certs():
     except Exception as err:
         print(err)
 
+###############################Funkcja eksperymentalna, wyklucza potrzebę posiadania jdk na hoście źródłowym############
+@clean_decor
+def ls_certs_pyjks():
+    import jks
+    global keystore_pwd
+    global certfilefp
 
+    def print_aliases(keystore):
+        result = ""
+        for alias in keystore.private_keys:
+            result += f"{alias} | "
+        print(result[:-3])  # Usuń ostatnią pustą pętlę
+
+    def print_certdate(keystore):
+        alias = input("Podaj alias certyfikatu ([enter] - powrót): ")
+        if not alias:
+            clean()
+            return
+        try:
+            cert_entry = keystore.private_keys.get(alias)
+            if cert_entry:
+                print(cert_entry.cert.creation_date)
+            else:
+                print("Nie znaleziono podanego aliasu.")
+        except Exception:
+            print("Wystąpił błąd.")
+        input("\n[enter] - powrót...")
+        clean()
+
+    def print_certificate(keystore):
+        alias = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
+        if not alias:
+            clean()
+            return
+        try:
+            cert_entry = keystore.private_keys.get(alias)
+            if cert_entry:
+                print(cert_entry.cert)
+            else:
+                print("Nie znaleziono podanego aliasu.")
+        except Exception:
+            print("Wystąpił błąd.")
+        input("\n[enter] - powrót...")
+        clean()
+
+    choosing = True
+
+    try:
+        with open(certfilefp, 'rb') as keystore_file:
+            keystore = jks.KeyStore.load(keystore_file, keystore_pwd)
+
+        cert_count = len(keystore.private_keys)
+
+        lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})", "Wyświetl datę utworzenia certyfikatu",
+                  "Wyświetl certyfikat"]
+
+        while choosing:
+            for lspos in lsmenu:
+                print("[{}] - {}".format(lsmenu.index(lspos) + 1, lspos))
+            print("\n[c] - powrót\n")
+            choice = input("Wybierz opcję i potwierdź: ")
+
+            if choice == "c":
+                choosing = False
+            elif choice.isdigit() and int(choice) in range(1, 4):
+                choice = int(choice) - 1
+                if choice == 0:
+                    print_aliases(keystore)
+                elif choice == 1:
+                    print_certdate(keystore)
+                elif choice == 2:
+                    print_certificate(keystore)
+            else:
+                clean()
+                print(try_again)
+
+    except Exception as err:
+        print(err)
+########################################################################################################################
 def check_structure():
     """
     Funkcja tworząca strukturę katalogów w przypadku jej braku na hoście źródłowym.
