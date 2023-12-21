@@ -1,35 +1,3 @@
-def in_req():
-    """
-    Funkcja sprawdzająca obecność wymaganych modułów spoza standardowej biblioteki pythona.
-    :return:
-    """
-    import sys
-    import os
-    import subprocess
-
-    try:
-        from conson import Conson
-        import paramiko
-        import cryptography
-        import jks
-    except ImportError:
-        print("Pobieranie i instalowanie zależności...")
-
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "pip"])
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "conson", "paramiko", "cryptography", "pyjks"])
-
-        print("Zainstalowano zależności. Ponowne uruchamianie skryptu...")
-    except KeyboardInterrupt:
-        print("Instalacja przerwana przez użytkownika.")
-        sys.exit(1)
-
-    fd = os.path.join(os.getcwd(), os.path.basename(__file__))
-    subprocess.run([sys.executable, f"{fd}"])
-    sys.exit()
-
-
-in_req()
-
 import os
 import subprocess
 import shutil
