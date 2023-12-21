@@ -8,7 +8,7 @@ import time
 # Informacje
 name = "CertUp"
 version = 1.0
-author = "DASiUS"    # https://github.com/pgabrys94
+author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
 certdir = os.path.join(os.getcwd(), "certs")
@@ -21,13 +21,15 @@ setup = False
 error = ""  # pozwala na wyświetlenie błędu przy nieosiągalnym hoście docelowym.
 keystore_pwd = ""
 uni_val = ["IP", "Port", "Login", "Hasło", "Komendy"]
+conn_status = {}
 
 # Utworzenie instancji klasy parametrów.
 data = Conson()
 
 
 class Remote:
-    def __init__(self, ip, port, login, pwd, command_list, verbose=False):
+    def __init__(self, hostname, ip, port, login, pwd, command_list, verbose=False):
+        self.hostname = hostname
         self.ip = ip
         self.port = port
         self.login = login
@@ -45,15 +47,15 @@ class Remote:
             self.terminal.set_missing_host_key_policy(paramiko.AutoAddPolicy)
             self.terminal.connect(self.ip, port=self.port, username=self.login, password=self.pwd)
             if self.verbose:
-                print("\n{}POŁĄCZONO{}".format(green, reset))
+                print("\n{}POŁĄCZONO z {}{}".format(green, self.hostname, reset))
         except Exception as err:
             if self.verbose:
-                print("{}BŁĄD POŁĄCZENIA{}: {}".format(red, reset, err))
+                print("{}BŁĄD POŁĄCZENIA z {}{}: {}".format(red, self.hostname, reset, err))
 
     def disconnect(self):
         self.terminal.close()
         if self.verbose:
-            print("{}ROZŁĄCZONO{}".format(green, reset))
+            print("{}ROZŁĄCZONO z {}{}".format(green, self.hostname, reset))
 
     def create_tree(self):
         with self.terminal.open_sftp() as sftp:
@@ -147,7 +149,7 @@ def up_certs():
         return
 
     def up_single(host):  # Wgraj na pojedyńczego hosta
-        target = Remote(data()[host][0], data()[host][1], data()[host][2],
+        target = Remote(host, data()[host][0], data()[host][1], data()[host][2],
                         data.unveil(data()[host][3]), data()[host][4], True)
 
         execute(target)
@@ -158,14 +160,14 @@ def up_certs():
     def up_all():  # Wgraj na wszystkie hosty
         try:
             for key, value in data().items():
-                if connection_ok(value[0], value[1], value[2], data.unveil(value[3])):
-                    target = Remote(value[0], value[1], value[2], data.unveil(value[3]), value[4], True)
+                if conn_status[key]:
+                    target = Remote(key, value[0], value[1], value[2], data.unveil(value[3]), value[4], True)
 
                     execute(target)
 
             input("\n[enter] - kontynuuuj...")
             return
-        except Exception as err:
+        except Exception:
             clean()
             return
 
@@ -180,7 +182,7 @@ def up_certs():
             printed_hosts = 0
             if len(data()) != 0:
                 for key, value in data().items():
-                    if connection_ok(value[0], value[1], value[2], data.unveil(value[3])):
+                    if conn_status[k]:
                         printed_hosts += 1
                         print("[{}] - {} [{}:{}] - {}"
                               .format(printed_hosts, key, value[0], value[1], value[2]))
@@ -448,34 +450,35 @@ def jdk_present():
         return False
 
 
-def connection_ok(ip, port, login, pwd):
+def connection_ok(host):
     """
     Healthcheck dla połączenia z hostami docelowymi.
-    :param ip: String
-    :param port: String/Int
-    :param login: String
-    :param pwd: String
+    :param host: String -> nazwa hosta będąca kluczem parametru instancji conson.
     :return:
     """
     global error
+    global conn_status
     error = ""
     ssh = paramiko.SSHClient()
     try:
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy)
-        ssh.connect(ip, int(port), login, pwd)
+        ssh.connect(data()[host][0], data()[host][1], data()[host][2], data.unveil(data()[host][3]))
 
         transport = ssh.get_transport()
 
         if transport.is_active():
             ssh.close()
-            return True
+            conn_status[host] = True
+            return
         else:
             ssh.close()
-            return False
+            conn_status[host] = False
+            return
     except Exception as err:
         error = str(err)
         ssh.close()
-        return False
+        conn_status[host] = False
+        return
 
 
 @clean_decor
@@ -762,7 +765,7 @@ while running:
             menu.insert(4, list(menu_full)[5])
         setup = False
     else:
-        print("\n{}WYBIERZ PLIK CERTYFIKATU{}\n".format(red, reset))
+        print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
         if jdk_present():
             if list(menu_full)[3] not in menu:
                 menu.insert(1, list(menu_full)[3])
@@ -770,9 +773,13 @@ while running:
 
 # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
     if len(data()) != 0:
+        print("Odpytywanie hostów...", end="")
+        for k in list(data()):
+            connection_ok(k)
+        print("\r" + " " * 20)
         print("\nSTATUS POŁĄCZENIA:\n")
-        for k, v in data().items():
-            print("{}{} {} {}{}".format(green if connection_ok(v[0], v[1], v[2], data.unveil(v[3])) else red,
+        for k, v in list(data()):
+            print("{}{} {} {}{}".format(green if conn_status[k] else red,
                                         k, "-" if len(error) != 0 else "", error, reset))
 
     print("\n{}".format(separator))
