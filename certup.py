@@ -28,6 +28,7 @@ error = ""  # pozwala na wyświetlenie błędu przy nieosiągalnym hoście docel
 keystore_pwd = ""
 uni_val = ["IP", "Port", "Login", "Hasło", "Komendy"]
 conn_status = {}
+host_status_fresh = False
 
 # Utworzenie instancji klasy parametrów.
 data = Conson()
@@ -439,6 +440,9 @@ def check_structure():
     if not os.path.exists(ksdir):
         os.mkdir(ksdir)
         need_restart = True
+    if not os.path.exists(certdir):
+        os.mkdir(certdir)
+        need_restart = True
     if need_restart:
         print("Utworzono strukturę katalogów. "
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
@@ -504,6 +508,7 @@ def select_keystore():
     global datafilefp
     global setup
     global keystore_pwd
+    global host_status_fresh
     choosing = True
     files = os.listdir(ksdir)
 
@@ -533,6 +538,7 @@ def select_keystore():
                 choosing = False
                 keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
                 keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
+                host_status_fresh = False
             else:
                 clean()
                 print(try_again)
@@ -556,7 +562,7 @@ def get_config():
             print(err)
             return False
 
-
+@clean_decor
 def salt_edit():
     """
     Edycja wartości soli kryptograficznej.
@@ -564,11 +570,11 @@ def salt_edit():
     """
     new_salt = input("Wprowadź sól (domyślnie: ch4ng3M3pl3453): ")
     if new_salt == "":
-        clean()
         print(cancel)
     else:
         data.salt = new_salt
-        return "{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset)
+        print("{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset))
+        time.sleep(1)
 
 
 @clean_decor
@@ -617,6 +623,7 @@ def target_hosts():
         Funkcja dodająca nowe hosty docelowe do pliku konfiguracyjnego przypisanego do magazynu kluczy.
         :return:
         """
+        global host_status_fresh
         vrs = {
             "Nazwa hosta: ": None,
             f"{uni_val[0]}: ": None,
@@ -633,6 +640,8 @@ def target_hosts():
         data.create(vrs[vrsl[0]], values[vrs[vrsl[0]]])
         data.veil(vrs[vrsl[0]], 3)
         data.save()
+        host_status_fresh = False
+        return
 
     @clean_decor
     def edit_host(host_key):
@@ -641,6 +650,7 @@ def target_hosts():
         :param host_key: String -> klucz odpowiadający przyjaznej nazwie hosta.
         :return:
         """
+        global host_status_fresh
         choosing_parameter = True
         changed = False
         values = data()[host_key]
@@ -671,7 +681,9 @@ def target_hosts():
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key, values)
                 data.veil(data()[host_key][3])
+                host_status_fresh = False
                 clean()
+                return
 
     @clean_decor
     def delete_host(host_key):
@@ -708,7 +720,7 @@ def target_hosts():
         if choice == "c":
             clean()
             print(cancel)
-            choosing = False
+            return
         if choice == "s":
             salt_edit()
         elif choice == "a":
@@ -730,10 +742,28 @@ def target_hosts():
             print(try_again)
 
 
-def refresh_all_statuses():
-    for key in list(data()):
-        connection_ok(key)
+def refresh_all_statuses(outdated=False):
+    global host_status_fresh
+    if outdated:
+        host_status_fresh = False
+    if not host_status_fresh:
+        host_status_fresh = True
+        print("Odpytywanie hostów...", end="", flush=True)
+        for key in list(data()):
+            connection_ok(key)
+        print("\r" + " " * 30, end="", flush=True)
+        print("")
     return
+
+
+def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do wybranego magazynu kluczy.
+    uc = r"""  __  ___  _____  _______    _________  _  _______________  __  _____________________  _  __
+ / / / / |/ / _ \/ __/ _ \  / ___/ __ \/ |/ / __/_  __/ _ \/ / / / ___/_  __/  _/ __ \/ |/ /
+/ /_/ /    / // / _// , _/ / /__/ /_/ /    /\ \  / / / , _/ /_/ / /__  / / _/ // /_/ /    / 
+\____/_/|_/____/___/_/|_|  \___/\____/_/|_/___/ /_/ /_/|_|\____/\___/ /_/ /___/\____/_/|_/"""
+
+    print(uc)
+    input("\n[enter] - powrót...")
 
 
 # Narzędzia formatowania tekstu
@@ -753,15 +783,15 @@ if check_structure():
     exit()
 
 menu = ["Wybierz plik magazynu kluczy"]
-########################################################### Dodać opcję importowania nowych certyfikatów do wybranego magazynu kluczy.
 menu_full = {
     "Wyświetl zawartość magazynu kluczy": ls_ks_pyjks,
+    "Zaimportuj certyfikaty do magazynu kluczy": cert_into_ks,
     "Wykonaj zdalną aktualizację magazynów kluczy": up_ks,
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_ks,
     "Hosty docelowe": target_hosts,
-    "Zmień sól": salt_edit,
-    "Odśwież status połączenia" : refresh_all_statuses
+    "Odśwież status połączenia": refresh_all_statuses,
+    "Zmień sól": salt_edit
 }
 
 # Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
@@ -773,26 +803,29 @@ while running:
         get_config()
         if setup:
             try:
-                menu.pop(menu.index(list(menu_full)[3]))
+                menu.pop(menu.index(list(menu_full)[4]))
             except Exception:
                 pass
             menu.insert(0, list(menu_full)[0])
             menu.insert(1, list(menu_full)[1])
-            menu.insert(3, list(menu_full)[4])
+            menu.insert(3, list(menu_full)[2])
             menu.insert(4, list(menu_full)[5])
+            if len(list(data())) > 0:
+                menu.insert(5, list(menu_full)[6])
+                menu.insert(6, list(menu_full)[7])
+            else:
+                menu.insert(5, list(menu_full)[7])
         setup = False
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
         if jdk_present():
-            if list(menu_full)[3] not in menu:
-                menu.insert(1, list(menu_full)[3])
+            if list(menu_full)[4] not in menu:
+                menu.insert(2, list(menu_full)[4])
 
 
 # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
-    if len(data()) != 0:
-        print("Odpytywanie hostów...", end="", flush=True)
+    if len(list(data())) > 0:
         refresh_all_statuses()
-        print("\r" + " " * 30, end="", flush=True)
         print("\nSTATUS POŁĄCZENIA:\n")
         for k in list(data()):
             print("{}{} {} {}{}".format(green if conn_status[k] else red,
@@ -810,6 +843,8 @@ while running:
             exit()
         elif u_in.isdigit() and int(u_in) <= 0:
             raise Exception("input less or equal to 0")
+        elif menu[int(u_in) - 1] == list(menu_full)[6]:
+            menu_full[menu[int(u_in) - 1]](True)
         else:
             menu_full[menu[int(u_in) - 1]]()
     except Exception:
