@@ -337,7 +337,7 @@ def ls_certs():
 
     def print_aliases(output):
         """
-        Wyświetl wszystie aliasy w magazynie kluczy.
+        Wyświetl wszystkie aliasy w magazynie kluczy.
         :param output: Rezultat zapytania o zawartość magazynu w rfc.
         :return:
         """
@@ -855,7 +855,7 @@ if check_structure():
 menu = ["Wybierz plik magazynu kluczy"]
 
 menu_full = {
-    "Wyświetl certyfikaty": ls_certs,
+    "Wyświetl certyfikaty": ls_certs_pyjks,
     "Wykonaj zdalną aktualizację magazynów kluczy": up_certs,
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
