@@ -860,7 +860,7 @@ if check_structure():
 menu = ["Wybierz plik magazynu kluczy"]
 
 menu_full = {
-    "Wyświetl certyfikaty": ls_certs_pyjks,
+    "Wyświetl certyfikaty": ls_certs,
     "Wykonaj zdalną aktualizację magazynów kluczy": up_certs,
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
