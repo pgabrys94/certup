@@ -501,7 +501,7 @@ def ls_certs_pyjks():
         #with open(certfilefp, 'rb') as keystore_file:
         keystore = jks.KeyStore.load(certfilefp, keystore_pwd)
 
-        cert_count = len(keystore.private_keys)
+        cert_count = len(keystore.certs)
 
         lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})", "Wyświetl datę utworzenia certyfikatu",
                   "Wyświetl certyfikat"]
