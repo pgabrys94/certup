@@ -459,8 +459,8 @@ def ls_certs_pyjks():
 
     def print_aliases(keystore):
         result = ""
-        column = 3
-        width = 70
+        column = 2
+        width = 80
         for i, alias in enumerate(list(keystore.certs), start=1):
             result += alias
             formatted = "{:<{}}".format(alias, width)
