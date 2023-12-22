@@ -5,7 +5,10 @@ import time
 import paramiko
 from conson import Conson
 import jks
-
+import base64
+import textwrap
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
 
 # Informacje
 name = "CertUp"
@@ -13,9 +16,10 @@ version = 1.0
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
+ksdir = os.path.join(os.getcwd(), "keystores")
+ksfile = ""
+ksfilefp = None
 certdir = os.path.join(os.getcwd(), "certs")
-certfile = ""
-certfilefp = None
 datadir = os.path.join(os.getcwd(), "configs")
 datafile = None
 datafilefp = ""
@@ -46,7 +50,7 @@ class Remote:
             else os.path.join("/", "root", "certup")
         self.backup_path = os.path.join(self.path, "backup")
         self.verbose = verbose
-        self.file = "cacerts"
+        self.file = "keystores/cacerts"
 
     def connect(self):
         """
@@ -171,11 +175,11 @@ def clean_decor(func):
 
 
 @clean_decor
-def up_certs():
+def up_ks():
     def execute(target):
         target.connect()
         target.create_tree()
-        target.upload(certfilefp)
+        target.upload(ksfilefp)
         target.import_jks(keystore_pwd, keystore_pwd)
         target.run()
         target.disconnect()
@@ -261,13 +265,13 @@ def up_certs():
 
 
 @clean_decor
-def share_cert():
+def share_ks():
     """
     Funkcja eksportu magazynu kluczy z hosta źródłowego.
     :return:
     """
 
-    def locate_java_certs():
+    def locate_java_ks():
         """
         Funkcja ustalająca ścieżkę magazynu kluczy Java.
         :return: String or False -> Zwraca kompletną ścieżkę lub FAŁSZ
@@ -294,26 +298,26 @@ def share_cert():
             print(er)
             return False
 
-    global certfile
-    global certdir
-    global certfilefp
+    global ksfile
+    global ksdir
+    global ksfilefp
     global datafile
     global datafilefp
     global datadir
     global setup
     global keystore_pwd
 
-    certfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
+    ksfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
     keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
     keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
 
-    certfilefp = os.path.join(certdir, certfile)
-    datafile = certfile + ".json"
+    ksfilefp = os.path.join(ksdir, ksfile)
+    datafile = ksfile + ".json"
     datafilefp = os.path.join(datadir, datafile)
     data.file = datafilefp
     setup = True
     try:
-        cacfp = locate_java_certs()
+        cacfp = locate_java_ks()
         if cacfp is False:
             print("is false")
             cacfp = r"{}".format(input("Wprowadź ścieżkę absolutną do magazynu kluczy (cacerts): "))
@@ -321,7 +325,7 @@ def share_cert():
         if not os.path.exists(cacfp):
             raise Exception("Podany magazyn kluczy nie istnieje.")
         else:
-            shutil.copy(cacfp, certfilefp)
+            shutil.copy(cacfp, ksfilefp)
 
         data.save()
     except Exception as err:
@@ -329,135 +333,20 @@ def share_cert():
 
 
 @clean_decor
-def ls_certs():
+def ls_ks_pyjks():
     """
-    Funkcja menu wyświetlania zawartości magazynu kluczy.
+    Funkcja menu wyświetlania zawartości magazynu kluczy w oparciu o moduł pyjks.
     :return:
     """
-
-    def print_aliases(output):
-        """
-        Wyświetl wszystkie aliasy w magazynie kluczy.
-        :param output: Rezultat zapytania o zawartość magazynu w rfc.
-        :return:
-        """
-        result = ""
-        for ln in output.split("\n"):
-            if "alias name" in ln.lower():
-                result += ln[ln.index(":") + 1:]
-        print(result.replace(" ", " | "))
-        input("\n[enter] - powrót...")
-        clean()
-
-    def print_certdate(output):
-        """
-        Wyświetl datę zaimportowania wskazanego certyfikatu do obecnego magazynu kluczy.
-        :param output: Rezultat zapytania o zawartość magazynu BEZ rfc.
-        :return:
-        """
-        uin = input("Podaj alias certyfikatu ([enter] - powrót): ")
-
-        if len(uin) == 0:
-            clean()
-            return
-        elif len(uin) > 0:
-            for ln in output.split("\n"):
-                if uin in ln.lower():
-                    print(ln.split(",")[1].strip())
-                    input("\n[enter] - powrót...")
-                    clean()
-                    return
-
-        if len(uin) > 0:
-            print("Nie znaleziono podanego aliasu.")
-            input("\n[enter] - powrót...")
-            clean()
-
-    def print_certificate():
-        """
-        Wyświetl klucz certyfikatu.
-        :return:
-        """
-        try:
-            uin = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
-
-            if len(uin) > 0:
-                try:
-                    cert_query = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
-                                                          "-storepass", f"{keystore_pwd}", "-alias", f"{uin}", "-rfc"],
-                                                         text=True)
-
-                    i = 3
-                    if uin in cert_query.split("\n")[0]:
-                        for ln in cert_query.split("\n"):
-                            i -= 1
-                            if i <= 0:
-                                print(ln)
-                        input("\n[enter] - powrót...")
-                        clean()
-                        return
-                except Exception:
-                    print("Nie znaleziono podanego aliasu.")
-                    input("\n[enter] - powrót...")
-                    clean()
-                    return
-            else:
-                clean()
-                return
-        except Exception:
-            clean()
-            print(try_again)
-
     global keystore_pwd
-    global certfilefp
-    choosing = True
-    cert_count = 0
-
-    try:
-
-        query = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}", "-storepass",
-                                         f"{keystore_pwd}", "-rfc"], text=True)
-
-        simple_query = subprocess.check_output(["keytool", "-list", "-keystore", f"{certfilefp}",
-                                                "-storepass", f"{keystore_pwd}"], text=True)
-
-        for line in query.split("\n"):
-            if "contains" in line:
-                cert_count = int(line.split(" ")[3])
-
-        lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})", "Wyświetl datę utworzenia certyfikatu",
-                  "Wyświetl certyfikat"]
-
-        while choosing:
-            for lspos in lsmenu:
-                print("[{}] - {}".format(lsmenu.index(lspos) + 1, lspos))
-            print("\n[c] - powrót\n")
-            choice = input("Wybierz opcję i potwierdź: ")
-
-            if choice == "c":
-                choosing = False
-            elif choice.isdigit() and int(choice) in range(1, 4):
-                choice = int(choice) - 1
-                if choice == 0:
-                    print_aliases(query)
-                elif choice == 1:
-                    print_certdate(simple_query)
-                elif choice == 2:
-                    print_certificate()
-            else:
-                clean()
-                print(try_again)
-
-    except Exception as err:
-        print(err)
-
-###############################Funkcja eksperymentalna, wyklucza potrzebę posiadania jdk na hoście źródłowym############
-@clean_decor
-def ls_certs_pyjks():
-    global keystore_pwd
-    global certfilefp
+    global ksfilefp
 
     def print_aliases(keystore):
+        """
+        Wyświetl wszystkie aliasy w magazynie kluczy.
+        :param keystore: Zawartość magazynu kluczy.
+        :return:
+        """
         result = ""
         column = 2
         width = 80
@@ -468,31 +357,37 @@ def ls_certs_pyjks():
         print("")
         print("{0}\n{1}\n{0}\n".format(separator, welcome))
 
-    def print_certdate(keystore):
-        alias = input("Podaj alias certyfikatu ([enter] - powrót): ")
-        if not alias:
-            clean()
-            return
-        try:
-            cert_entry = keystore.private_keys.get(alias)
-            if cert_entry:
-                print(cert_entry.cert.creation_date)
-            else:
-                print("Nie znaleziono podanego aliasu.")
-        except Exception:
-            print("Wystąpił błąd.")
-        input("\n[enter] - powrót...")
-        clean()
-
     def print_certificate(keystore):
-        alias = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
-        if not alias:
+        """
+        Wyświetl klucz certyfikatu i datę jego utworzenia.
+        :return:
+        """
+        def decode_date(code):
+            cert_data = code.cert
+            x509_cert = x509.load_der_x509_certificate(cert_data, default_backend())
+            not_before = x509_cert.not_valid_before
+            return not_before.strftime("%Y-%m-%d %H:%M:%S")
+
+        alias_inp = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
+        if not alias_inp:
             clean()
             return
+
         try:
-            cert_entry = keystore.private_keys.get(alias)
-            if cert_entry:
-                print(cert_entry.cert)
+            found = {}
+            for alias, c in keystore.certs.items():
+                if alias_inp in alias:
+                    found[alias] = c
+            if len(list(found)) != 0:
+                for alias, c in found.items():
+                    print("\nZNALEZIONO: {}".format(alias))
+                    print("{}DATA UTWORZENIA:{} {}\n".format(blue, reset, decode_date(c)))
+                    print("-----BEGIN CERTIFICATE-----")
+                    print("\r\n".join(textwrap.wrap(base64.b64encode(c.cert).decode('ascii'), 64)))
+                    print("-----END CERTIFICATE-----")
+                    input("\n[enter] - {}".format("wyświetl następny" if alias != list(found)[-1] else "powrót..."))
+                    clean()
+                return
             else:
                 print("Nie znaleziono podanego aliasu.")
         except Exception:
@@ -503,13 +398,12 @@ def ls_certs_pyjks():
     choosing = True
 
     try:
-        #with open(certfilefp, 'rb') as keystore_file:
-        keystore = jks.KeyStore.load(certfilefp, keystore_pwd)
+        java_keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
 
-        cert_count = len(keystore.certs)
+        cert_count = len(java_keystore.certs)
 
-        lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})", "Wyświetl datę utworzenia certyfikatu",
-                  "Wyświetl certyfikat"]
+        lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})",
+                  "Wyświetl certyfikat i datę utworzenia"]
 
         while choosing:
             for lspos in lsmenu:
@@ -522,18 +416,17 @@ def ls_certs_pyjks():
             elif choice.isdigit() and int(choice) in range(1, 4):
                 choice = int(choice) - 1
                 if choice == 0:
-                    print_aliases(keystore)
+                    print_aliases(java_keystore)
                 elif choice == 1:
-                    print_certdate(keystore)
-                elif choice == 2:
-                    print_certificate(keystore)
+                    print_certificate(java_keystore)
             else:
                 clean()
                 print(try_again)
 
     except Exception as err:
         print(err)
-########################################################################################################################
+
+
 def check_structure():
     """
     Funkcja tworząca strukturę katalogów w przypadku jej braku na hoście źródłowym.
@@ -543,11 +436,13 @@ def check_structure():
     if not os.path.exists(datadir):
         os.mkdir(datadir)
         need_restart = True
-    if not os.path.exists(certdir):
-        os.mkdir(certdir)
+    if not os.path.exists(ksdir):
+        os.mkdir(ksdir)
         need_restart = True
     if need_restart:
-        print("Utworzono strukturę katalogów. Umieść plik certyfikatów w folderze 'certs' i uruchom ponownie program.")
+        print("Utworzono strukturę katalogów. "
+              "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
+        print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs' przed uruchomieniem programu.")
         return True
 
 
@@ -599,18 +494,18 @@ def connection_ok(host):
 @clean_decor
 def select_keystore():
     """
-    Funkcja menu wyboru magazynu kluczy z listy plików w folderze ./certs
+    Funkcja menu wyboru magazynu kluczy z listy plików w folderze ./keystores
     :return:
     """
-    global certfile
-    global certdir
-    global certfilefp
+    global ksfile
+    global ksdir
+    global ksfilefp
     global datafile
     global datafilefp
     global setup
     global keystore_pwd
     choosing = True
-    files = os.listdir(certdir)
+    files = os.listdir(ksdir)
 
     while choosing:
         i = 0
@@ -625,13 +520,13 @@ def select_keystore():
         if choice == "c":
             clean()
             print(cancel)
-            certfile = certfile
+            ksfile = ksfile
             choosing = False
         elif choice.isdigit():
             if int(choice) in range(1, len(files) + 1):
-                certfile = files[int(choice) - 1]
-                certfilefp = os.path.join(certdir, certfile)
-                datafile = certfile + ".json"
+                ksfile = files[int(choice) - 1]
+                ksfilefp = os.path.join(ksdir, ksfile)
+                datafile = ksfile + ".json"
                 datafilefp = os.path.join(datadir, datafile)
                 data.file = datafilefp
                 setup = True
@@ -648,8 +543,8 @@ def select_keystore():
 
 def get_config():
     """
-    Funkcja wczytująca istniejący plik konfiguracyjny przypisany do certyfikatu LUB tworząca pusty plik
-     w formacie: <nazwa certyfikatu>.json
+    Funkcja wczytująca istniejący plik konfiguracyjny przypisany do magazynu kluczy LUB tworząca pusty plik
+     w formacie: <nazwa magazynu>.json
     :return:
     """
     if not os.path.exists(datafilefp):
@@ -858,12 +753,12 @@ if check_structure():
     exit()
 
 menu = ["Wybierz plik magazynu kluczy"]
-
+########################################################### Dodać opcję importowania nowych certyfikatów do wybranego magazynu kluczy.
 menu_full = {
-    "Wyświetl certyfikaty": ls_certs,
-    "Wykonaj zdalną aktualizację magazynów kluczy": up_certs,
+    "Wyświetl zawartość magazynu kluczy": ls_ks_pyjks,
+    "Wykonaj zdalną aktualizację magazynów kluczy": up_ks,
     "Wybierz plik magazynu kluczy": select_keystore,
-    "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
+    "Wyeksportuj i użyj lokalnego magazynu kluczy": share_ks,
     "Hosty docelowe": target_hosts,
     "Zmień sól": salt_edit,
     "Odśwież status połączenia" : refresh_all_statuses
@@ -873,8 +768,8 @@ menu_full = {
 running = True
 while running:
     clean()
-    if certfile != "":
-        print("{}OPERUJESZ NA PLIKU: {}{}".format(green, certfile, reset))
+    if ksfile != "":
+        print("{}OPERUJESZ NA PLIKU: {}{}".format(green, ksfile, reset))
         get_config()
         if setup:
             try:
