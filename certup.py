@@ -459,8 +459,8 @@ def ls_certs_pyjks():
 
     def print_aliases(keystore):
         result = ""
-        for alias in keystore.certs.split(":")[0:2]:
-            result += f"{alias[0] + ':' + alias[1] if len(alias) > 1 else alias[0]} | "
+        for alias in list(keystore.certs):
+            result += f"{alias} | "
         print(result[:-3])  # Usuń ostatnią pustą pętlę
 
     def print_certdate(keystore):
