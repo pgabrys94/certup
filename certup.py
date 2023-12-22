@@ -532,6 +532,7 @@ def ls_certs_pyjks():
                 print(try_again)
 
     except Exception as err:
+        print("Error?")
         print(err)
 ########################################################################################################################
 def check_structure():
