@@ -498,8 +498,8 @@ def ls_certs_pyjks():
     choosing = True
 
     try:
-        with open(certfilefp, 'rb') as keystore_file:
-            keystore = jks.KeyStore.load(keystore_file, keystore_pwd)
+        #with open(certfilefp, 'rb') as keystore_file:
+        keystore = jks.KeyStore.load(certfilefp, keystore_pwd)
 
         cert_count = len(keystore.private_keys)
 
