@@ -465,6 +465,7 @@ def ls_certs_pyjks():
             result += alias
             formatted = "{:<{}}".format(alias, width)
             print(formatted, end="\n" if i % column == 0 else " ")
+            print()
 
     def print_certdate(keystore):
         alias = input("Podaj alias certyfikatu ([enter] - powrót): ")
