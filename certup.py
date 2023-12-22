@@ -529,10 +529,10 @@ def ls_certs_pyjks():
                     print_certificate(keystore)
             else:
                 clean()
+                print("Error?")
                 print(try_again)
 
     except Exception as err:
-        print("Error?")
         print(err)
 ########################################################################################################################
 def check_structure():
