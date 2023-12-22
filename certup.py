@@ -830,6 +830,12 @@ def target_hosts():
             print(try_again)
 
 
+def refresh_all_statuses():
+    for key in list(data()):
+        connection_ok(key)
+    return
+
+
 # Narzędzia formatowania tekstu
 green = "\033[92m"
 red = "\033[91m"
@@ -854,7 +860,8 @@ menu_full = {
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_cert,
     "Hosty docelowe": target_hosts,
-    "Zmień sól": salt_edit
+    "Zmień sól": salt_edit,
+    "Odśwież status połączenia" : refresh_all_statuses
 }
 
 # Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
@@ -884,8 +891,7 @@ while running:
 # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
     if len(data()) != 0:
         print("Odpytywanie hostów...", end="", flush=True)
-        for k in list(data()):
-            connection_ok(k)
+        refresh_all_statuses()
         print("\r" + " " * 30, end="", flush=True)
         print("\nSTATUS POŁĄCZENIA:\n")
         for k in list(data()):
