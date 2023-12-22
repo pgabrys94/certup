@@ -459,9 +459,12 @@ def ls_certs_pyjks():
 
     def print_aliases(keystore):
         result = ""
-        for alias in list(keystore.certs):
-            result += f"{alias} | "
-        print(result[:-3])  # Usuń ostatnią pustą pętlę
+        column = 3
+        width = 70
+        for i, alias in enumerate(list(keystore.certs), start=1):
+            result += alias
+            formatted = "{:<{}}".format(alias, width)
+            print(formatted, end="\n" if i % column == 0 else " ")
 
     def print_certdate(keystore):
         alias = input("Podaj alias certyfikatu ([enter] - powrót): ")
