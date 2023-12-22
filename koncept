@@ -1,2 +1,0 @@
-1. wykorzystanie pyjks (żeby jdk nie było potrzebne na hoście źródłowym)
-2. funkcja importowania certyfikatów do magazynu kluczy
