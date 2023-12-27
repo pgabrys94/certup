@@ -314,7 +314,11 @@ def share_ks():
     global setup
     global keystore_pwd
 
-    ksfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
+    while True:
+        ksfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
+        if ksfile != "":
+            break
+        print("{}Błąd:{} Nazwa nie może być pusta.".format(red, reset))
     keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
     keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
 
