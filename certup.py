@@ -702,7 +702,7 @@ def target_hosts():
             print("Edytowany host: {}".format(host_key))
             print(separator)
             print("{}: {}".format(uni_val[0], values[0]))
-            print("{}}: {}".format(uni_val[1], values[1]))
+            print("{}: {}".format(uni_val[1], values[1]))
             print("{}: {}".format(uni_val[2], values[2]))
             print(separator)
             print("{}: {}".format(uni_val[4], values[4]))
