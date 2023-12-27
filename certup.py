@@ -9,16 +9,19 @@ import base64
 import textwrap
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.hazmat.primitives.serialization import pkcs12
 
 # Informacje
 name = "CertUp"
-version = 1.0
+version = 1.11
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
 ksdir = os.path.join(os.getcwd(), "keystores")
 ksfile = ""
-ksfilefp = None
+ksfilefp = ""
 certdir = os.path.join(os.getcwd(), "certs")
 datadir = os.path.join(os.getcwd(), "configs")
 datafile = None
@@ -655,7 +658,6 @@ def target_hosts():
         """
         global host_status_fresh
         choosing_parameter = True
-        changed = False
         values = data()[host_key]
 
         while choosing_parameter:
@@ -675,16 +677,14 @@ def target_hosts():
             parameter_choice = input("Wybierz opcję i potwierdź: ")
 
             if parameter_choice == "c":
-                if changed:
-                    data.save()
                 choosing_parameter = False
                 clean()
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 6):
-                changed = True
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key, values)
                 data.veil(data()[host_key][3])
                 host_status_fresh = False
+                data.save()
                 clean()
                 return
 
@@ -759,14 +759,49 @@ def refresh_all_statuses(outdated=False):
     return
 
 
+@clean_decor
 def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do wybranego magazynu kluczy.
-    uc = r"""  __  ___  _____  _______    _________  _  _______________  __  _____________________  _  __
- / / / / |/ / _ \/ __/ _ \  / ___/ __ \/ |/ / __/_  __/ _ \/ / / / ___/_  __/  _/ __ \/ |/ /
-/ /_/ /    / // / _// , _/ / /__/ /_/ /    /\ \  / / / , _/ /_/ / /__  / / _/ // /_/ /    / 
-\____/_/|_/____/___/_/|_|  \___/\____/_/|_/___/ /_/ /_/|_|\____/\___/ /_/ /___/\____/_/|_/"""
 
-    print(uc)
-    input("\n[enter] - powrót...")
+    def proceed():
+        try:
+            for file in os.listdir(certdir):
+                alias = file.split(".")[0]
+                uin = input(f"Podaj hasło do {file} (jeżeli jest wymagane): ")
+                pkcspwd = None if uin == "" else uin.encode()
+                with open (file, "rb") as pkcs12_file:
+                    pkcs = pkcs12_file.read()
+                privkey, cert, others = pkcs12.load_key_and_certificates(pkcs, pkcspwd, default_backend())
+
+                java_keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
+
+                pk_entry = jks.PrivateKeyEntry.new(alias=alias, key=privkey, certs=[cert])
+                java_keystore.entries[alias] = pk_entry
+                java_keystore.save(ksfilefp, keystore_pwd)
+        except Exception as err:
+            print("{}Błąd: {}{}".format(red, reset, err))
+
+    warn = """
+###########
+#  UWAGA  #
+###########
+
+Zostaną zaimportowane wszystkie pliki znajdujące się w katalogu ./certs
+Kontynuować?
+"""
+
+    print(warn)
+    choosing = True
+    while choosing:
+        choice = input("[t/n] - domyślnie [n]: ")
+
+        if choice == "" or choice.lower() == "n":
+            print(cancel)
+            choosing = False
+        elif choice.lower() == "t":
+            proceed()
+            choosing = False
+        else:
+            print(try_again)
 
 
 # Narzędzia formatowania tekstu
@@ -788,7 +823,7 @@ if check_structure():
 menu = ["Wybierz plik magazynu kluczy"]
 menu_full = {
     "Wyświetl zawartość magazynu kluczy": ls_ks_pyjks,
-    "Zaimportuj certyfikaty do magazynu kluczy": cert_into_ks,
+    "Zaimportuj certyfikaty PKCS12 do magazynu kluczy": cert_into_ks,
     "Wykonaj zdalną aktualizację magazynów kluczy": up_ks,
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_ks,
