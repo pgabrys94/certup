@@ -101,7 +101,7 @@ class Remote:
         :return:
         """
         command = (f"keytool -importkeystore -deststorepass {destpwd} -trustcacerts -srckeystore"
-                   f" {os.path.join(self.path, "cacerts")} -srcstorepass {srcpwd} -noprompt")
+                   f" {os.path.join(self.path, 'cacerts')} -srcstorepass {srcpwd} -noprompt")
         if self.verbose:
             print("Importowanie magazynu kluczy...")
         try:
