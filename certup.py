@@ -9,9 +9,7 @@ import base64
 import textwrap
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.serialization import load_pem_private_key
-from cryptography.hazmat.primitives.serialization import pkcs12
+
 
 # Informacje
 name = "CertUp"
@@ -764,25 +762,8 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
 
     def proceed():
         try:
-            for file in os.listdir(certdir):
-                alias = file.split(".")[0]
-                uin = input(f"Podaj hasło do {file} (jeżeli jest wymagane): ")
-                pkcspwd = None if uin == "" else uin.encode()
-                with open(os.path.join(certdir, file), "rb") as pkcs12_file:
-                    pkcs = pkcs12_file.read()
-                privkey, cert, others = pkcs12.load_key_and_certificates(pkcs, pkcspwd, default_backend())
-
-                privkey_value = privkey.private_bytes(
-                    encoding=serialization.Encoding.PEM,
-                    format=serialization.PrivateFormat.TraditionalOpenSSL,
-                    encryption_algorithm=serialization.NoEncryption()
-                )
-
-                java_keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
-
-                pk_entry = jks.PrivateKeyEntry.new(alias=alias, key=privkey_value, certs=[cert])
-                java_keystore.entries[alias] = pk_entry
-                java_keystore.save(ksfilefp, keystore_pwd)
+            # for file in os.listdir(certdir):
+            pass
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
             input("errPause")
@@ -855,7 +836,8 @@ while running:
             except Exception:
                 pass
             menu.insert(0, list(menu_full)[0])
-            menu.insert(1, list(menu_full)[1])
+            if jdk_present():
+                menu.insert(1, list(menu_full)[1])
             menu.insert(3, list(menu_full)[2])
             menu.insert(4, list(menu_full)[5])
             if len(list(data())) > 0:
