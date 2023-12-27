@@ -683,7 +683,7 @@ def target_hosts():
         vrsl = list(vrs)
 
         for var in vrsl:
-            vrs[var] = new_value(var)
+            vrs[var] = new_value(var.split(":")[0])
         values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
         data.create(vrs[vrsl[0]], values[vrs[vrsl[0]]])
         data.veil(vrs[vrsl[0]], 3)
