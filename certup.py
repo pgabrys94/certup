@@ -798,7 +798,11 @@ Kontynuować?
             print(cancel)
             choosing = False
         elif choice.lower() == "t":
-            proceed()
+            if len(os.listdir(certdir)) != 0:
+                proceed()
+            else:
+                print("Brak plików certyfikatów w katalogu ./certs \n{}".format(cancel))
+                time.sleep(2)
             choosing = False
         else:
             print(try_again)
