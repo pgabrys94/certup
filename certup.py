@@ -633,7 +633,7 @@ def target_hosts():
         :return:
         """
         while True:
-            changed_to = input("{} :".format(val))
+            changed_to = input("{}: ".format(val))
             try:
                 i = 1
                 if "IP" in val:
