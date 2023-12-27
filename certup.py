@@ -651,8 +651,12 @@ def target_hosts():
                     else:
                         return changed_to
                 elif "Komendy" in val:
-                    changed_to = changed_to.split("#")
-                    return changed_to
+                    commands = changed_to.split("#")
+                    clean_commands = []
+                    for command in commands:
+                        if len(command) > 0:
+                            clean_commands.append(command)
+                    return clean_commands
                 else:
                     return changed_to
 
@@ -696,7 +700,6 @@ def target_hosts():
         global host_status_fresh
         choosing_parameter = True
         values = data()[host_key]
-        print(values)
         while choosing_parameter:
             print(separator)
             print("Edytowany host: {}".format(host_key))
