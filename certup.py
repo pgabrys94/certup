@@ -314,6 +314,9 @@ def share_ks():
     global setup
     global keystore_pwd
 
+    if ksfile == "":
+        setup = True
+
     while True:
         ksfile = input("Wprowadź przyjazną nazwę dla pliku magazynu kluczy: ")
         if ksfile != "":
@@ -326,7 +329,6 @@ def share_ks():
     datafile = ksfile + ".json"
     datafilefp = os.path.join(datadir, datafile)
     data.file = datafilefp
-    setup = True
     try:
         cacfp = locate_java_ks()
         if cacfp is False:
