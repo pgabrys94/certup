@@ -903,7 +903,7 @@ while running:
     if ksfile != "":
         print("{}OPERUJESZ NA PLIKU: {}{}".format(green, ksfile, reset))
         get_config()
-        print(data())
+
         if setup:
             menu.insert(0, list(menu_full)[0])
             menu.insert(2, list(menu_full)[1])
