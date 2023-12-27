@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Informacje
 name = "CertUp"
-version = 1.11
+version = 1.15
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
@@ -608,11 +608,12 @@ def salt_edit():
     new_salt = input("Wprowadź sól (domyślnie: ch4ng3M3pl3453): ")
     if new_salt == "":
         print(cancel)
+        time.sleep(2)
     else:
         data.salt = new_salt
         print("{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset))
         host_status_fresh = False
-        time.sleep(1)
+        time.sleep(2)
 
 
 
