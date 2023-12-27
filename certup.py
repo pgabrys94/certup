@@ -762,8 +762,9 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
 
     def proceed():
         try:
-            # for file in os.listdir(certdir):
-            pass
+            for file in os.listdir(certdir):
+                subprocess.run(["keytool", "-import", "-trustedca", "-alias", f"{file.split(".")[0]}",
+                                "-file", f"{os.path.join(certdir, file)}", "-storepass", f"{keystore_pwd}"])
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
             input("errPause")
