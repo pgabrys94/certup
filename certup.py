@@ -772,9 +772,15 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
                     pkcs = pkcs12_file.read()
                 privkey, cert, others = pkcs12.load_key_and_certificates(pkcs, pkcspwd, default_backend())
 
+                privkey_value = privkey.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=serialization.NoEncryption()
+                )
+
                 java_keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
 
-                pk_entry = jks.PrivateKeyEntry.new(alias=alias, key=privkey, certs=[cert])
+                pk_entry = jks.PrivateKeyEntry.new(alias=alias, key=privkey_value, certs=[cert])
                 java_keystore.entries[alias] = pk_entry
                 java_keystore.save(ksfilefp, keystore_pwd)
         except Exception as err:
