@@ -632,7 +632,7 @@ def target_hosts():
         :return:
         """
         while True:
-            changed_to = input("{}: ".format(val))
+            changed_to = input("{} :".format(val))
             try:
                 i = 1
                 if "IP" in val:
@@ -651,7 +651,7 @@ def target_hosts():
                     else:
                         return changed_to
                 elif "Komendy" in val:
-                    changed_to = val.split("#")
+                    changed_to = changed_to.split("#")
                     return changed_to
                 else:
                     return changed_to
@@ -701,11 +701,11 @@ def target_hosts():
             print(separator)
             print("Edytowany host: {}".format(host_key))
             print(separator)
-            print("IP: {}".format(values[0]))
-            print("Port: {}".format(values[1]))
-            print("Login: {}".format(values[2]))
+            print("{}: {}".format(uni_val[0], values[0]))
+            print("{}}: {}".format(uni_val[1], values[1]))
+            print("{}: {}".format(uni_val[2], values[2]))
             print(separator)
-            print("Komendy: {}".format(values[4]))
+            print("{}: {}".format(uni_val[4], values[4]))
             print(separator)
 
             for opt in uni_val:
