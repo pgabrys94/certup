@@ -651,7 +651,7 @@ def target_hosts():
                     else:
                         return changed_to
                 elif "Komendy" in val:
-                    changed_to = val.split("#").strip()
+                    changed_to = val.split("#")
                     return changed_to
                 else:
                     return changed_to
