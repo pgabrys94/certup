@@ -407,10 +407,12 @@ def ls_ks():
 
                 keystore.save(ksfilefp, keystore_pwd)
 
-                print(f"Usunięto certyfikat '{alias_inp}' z magazynu kluczy {ksfile}.")
+                print(f"Usunięto certyfikat '{alias_inp}' z magazynu kluczy '{ksfile}'.")
                 time.sleep(2)
+            elif alias_inp.strip() == "":
+                print(cancel)
             else:
-                print(f"Nie znaleziono certyfikatu'{alias_inp}' w magazynie kluczy {ksfile}.")
+                print(f"Nie znaleziono certyfikatu '{alias_inp}' w magazynie kluczy '{ksfile}'.")
                 time.sleep(2)
         except Exception as er:
             print("{}Błąd:{} {}".format(red, reset, er))
@@ -813,6 +815,7 @@ def cert_into_ks():
                     input("Kontynuuj...")
             if i > 0:
                 print("{}SUKCES:{} zaimportowano {} certyfikatów.".format(green, reset, i))
+                time.sleep(2)
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
             input("Kontynuuj...")
