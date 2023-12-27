@@ -814,7 +814,14 @@ def cert_into_ks():
                     print("{}Błąd: {}{}".format(red, reset, err))
                     input("Kontynuuj...")
             if i > 0:
-                print("{}SUKCES:{} zaimportowano {} certyfikatów.".format(green, reset, i))
+                no_wez_odmien = ["certyfikat", "certyfikaty", "certyfikatów"]
+                if i == 1:
+                    odmiana = no_wez_odmien[0]
+                elif i == 2:
+                    odmiana = no_wez_odmien[1]
+                else:
+                    odmiana = no_wez_odmien[2]
+                print("{}SUKCES:{} zaimportowano {} {}}.".format(green, reset, i, odmiana))
                 time.sleep(2)
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
