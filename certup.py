@@ -336,9 +336,9 @@ def share_ks():
 
 
 @clean_decor
-def ls_ks_pyjks():
+def ls_ks():
     """
-    Funkcja menu wyświetlania zawartości magazynu kluczy w oparciu o moduł pyjks.
+    Funkcja menu wyświetlania zawartości magazynu kluczy.
     :return:
     """
     global keystore_pwd
@@ -393,10 +393,24 @@ def ls_ks_pyjks():
                 return
             else:
                 print("Nie znaleziono podanego aliasu.")
-        except Exception:
-            print("Wystąpił błąd.")
+        except Exception as er:
+            print("{}Błąd:{} {}".format(red, reset, er))
         input("\n[enter] - powrót...")
         clean()
+
+    def delete_cert(keystore):
+        alias_inp = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
+        try:
+            if alias_inp in keystore.entries:
+                del java_keystore.entries[alias_inp]
+
+                keystore.save(ksfilefp, keystore_pwd)
+
+                print(f"Usunięto certyfikat '{alias_inp}' z magazynu kluczy {ksfile}.")
+            else:
+                print(f"Nie znaleziono certyfikatu'{alias_inp}' w magazynie kluczy {ksfile}.")
+        except Exception as er:
+            print("{}Błąd:{} {}".format(red, reset, er))
 
     choosing = True
 
@@ -405,8 +419,11 @@ def ls_ks_pyjks():
 
         cert_count = len(java_keystore.certs)
 
-        lsmenu = [f"Wyświetl wszystkie nazwy ({cert_count})",
-                  "Wyświetl certyfikat i datę utworzenia"]
+        lsmenu = [
+            f"Wyświetl wszystkie nazwy ({cert_count})",
+            "Wyświetl certyfikat i datę utworzenia",
+            "Usuń certyfikat z magazynu kluczy"
+            ]
 
         while choosing:
             for lspos in lsmenu:
@@ -422,6 +439,8 @@ def ls_ks_pyjks():
                     print_aliases(java_keystore)
                 elif choice == 1:
                     print_certificate(java_keystore)
+                elif choice == 2:
+                    delete_cert(java_keystore)
             else:
                 clean()
                 print(try_again)
@@ -566,6 +585,7 @@ def get_config():
         except Exception as err:
             print(err)
             return False
+
 
 @clean_decor
 def salt_edit():
@@ -759,10 +779,11 @@ def refresh_all_statuses(outdated=False):
 
 
 @clean_decor
-def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do wybranego magazynu kluczy.
+def cert_into_ks():
 
     def proceed():
         try:
+            i = 0
             for file in os.listdir(certdir):
                 try:
                     if file.split(".")[1] == "crt":
@@ -778,16 +799,20 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
                         keystore.entries[alias] = trusted_cert_entry
 
                         keystore.save(ksfilefp, keystore_pwd)
+                        i += 1
                 except IndexError:
                     print("{}Błąd:{} Brak plików .crt w katalogu './certs'.".format(red, reset))
                     print(cancel)
                     time.sleep(2)
                 except Exception as err:
                     print("{}Błąd: {}{}".format(red, reset, err))
-                    input("errPause")
+                    input("Kontynuuj...")
+            if i > 0:
+                print("{}SUKCES:{} zaimportowano {} certyfikatów.".format(green, reset, i))
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
-            input("errPause")
+            input("Kontynuuj...")
+
     warn = """
 #############
 #   UWAGA   #
@@ -834,7 +859,7 @@ if check_structure():
 
 menu = ["Wybierz plik magazynu kluczy"]
 menu_full = {
-    "Wyświetl zawartość magazynu kluczy": ls_ks_pyjks,
+    "Wyświetl zawartość magazynu kluczy": ls_ks,
     "Zaimportuj certyfikaty do magazynu kluczy": cert_into_ks,
     "Wykonaj zdalną aktualizację magazynów kluczy": up_ks,
     "Wybierz plik magazynu kluczy": select_keystore,
@@ -857,8 +882,7 @@ while running:
             except Exception:
                 pass
             menu.insert(0, list(menu_full)[0])
-            if jdk_present():
-                menu.insert(1, list(menu_full)[1])
+            menu.insert(1, list(menu_full)[1])
             menu.insert(3, list(menu_full)[2])
             menu.insert(4, list(menu_full)[5])
             if len(list(data())) > 0:
