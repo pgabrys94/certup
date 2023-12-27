@@ -595,12 +595,11 @@ def get_config():
     """
     if not os.path.exists(datafilefp):
         data.save()
-    else:
-        try:
-            data.load()
-        except Exception as err:
-            print(err)
-            return False
+    try:
+        data.load()
+    except Exception as err:
+        print(err)
+        return False
 
 
 @clean_decor
@@ -903,6 +902,7 @@ while running:
     if ksfile != "":
         print("{}OPERUJESZ NA PLIKU: {}{}".format(green, ksfile, reset))
         get_config()
+        print(data)
         if setup:
             menu.insert(0, list(menu_full)[0])
             menu.insert(2, list(menu_full)[1])
