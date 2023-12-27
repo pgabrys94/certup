@@ -768,7 +768,7 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
                 alias = file.split(".")[0]
                 uin = input(f"Podaj hasło do {file} (jeżeli jest wymagane): ")
                 pkcspwd = None if uin == "" else uin.encode()
-                with open (file, "rb") as pkcs12_file:
+                with open(os.path.join(certdir, file), "rb") as pkcs12_file:
                     pkcs = pkcs12_file.read()
                 privkey, cert, others = pkcs12.load_key_and_certificates(pkcs, pkcspwd, default_backend())
 
