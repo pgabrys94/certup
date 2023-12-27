@@ -232,7 +232,7 @@ def up_ks():
 
             if printed_hosts > 0:
                 print("[{}-{}] - wybierz hosta".format(1, printed_hosts))
-            print("[c] - powrót\n")
+            print("\n[c] - powrót\n")
             choice = input("Wybierz opcję i potwierdź: ")
 
             if choice == "c":
@@ -551,7 +551,7 @@ def select_keystore():
             i += 1
 
         print(separator)
-        print("[c] - powrót\n")
+        print("\n[c] - powrót\n")
 
         choice = input("Wybierz plik magazynu kluczy: ")
         if choice == "c":
@@ -655,7 +655,7 @@ def target_hosts():
                     clean_commands = []
                     for command in commands:
                         if len(command) > 0:
-                            clean_commands.append(command)
+                            clean_commands.append(command.strip())
                     return clean_commands
                 else:
                     return changed_to
@@ -713,7 +713,7 @@ def target_hosts():
 
             for opt in uni_val:
                 print("[{}] - {}{}".format(uni_val.index(opt) + 1, "Zmień ", opt if opt == uni_val[0] else opt.lower()))
-            print("[c] - powrót\n")
+            print("\n[c] - powrót\n")
             parameter_choice = input("Wybierz opcję i potwierdź: ")
 
             if parameter_choice == "c":
@@ -722,7 +722,6 @@ def target_hosts():
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 6):
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key, values)
-                print(values)
                 if int(parameter_choice) == 3:
                     data.veil(data()[host_key][3])
                 host_status_fresh = False
@@ -760,7 +759,7 @@ def target_hosts():
             print("[d] + [{}-{}] - usuń hosta".format(1, len(data())))
         print("[a] - dodaj nowego hosta")
         print("[s] - zmień sól")
-        print("[c] - powrót\n")
+        print("\n[c] - powrót\n")
         choice = input("Wybierz opcję i potwierdź: ")
         if choice == "c":
             clean()
@@ -911,16 +910,16 @@ while running:
 
         if setup:
             menu.insert(0, list(menu_full)[0])
-            menu.insert(2, list(menu_full)[1])
-            menu.insert(3, list(menu_full)[2])
-            menu.insert(4, list(menu_full)[5])
-            menu.insert(5, list(menu_full)[7])
+            menu.insert(3, list(menu_full)[1])
+            menu.insert(4, list(menu_full)[2])
+            menu.insert(5, list(menu_full)[5])
+            menu.insert(6, list(menu_full)[7])
             setup = False
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
         if jdk_present():
             if list(menu_full)[4] not in menu:
-                menu.insert(1, list(menu_full)[4])
+                menu.insert(2, list(menu_full)[4])
 
 
 # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
