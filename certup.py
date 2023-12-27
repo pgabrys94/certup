@@ -779,7 +779,7 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
                 java_keystore.save(ksfilefp, keystore_pwd)
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
-
+            input("errPause")
     warn = """
 ###########
 #  UWAGA  #
