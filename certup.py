@@ -240,11 +240,7 @@ def up_ks():
                 clean()
                 choosing_host = False
             elif choice.isdigit() and int(choice) in range(1, len(data()) + 1):
-                if connection_ok(list(data())[int(choice) - 1]):
-                    up_single(list(data())[int(choice) - 1])
-                else:
-                    print("{}Błąd:{} Wskazany host jest niedostępny.".format(red, reset))
-                    print(try_again)
+                up_single(list(data())[int(choice) - 1])
             else:
                 clean()
                 print(try_again)
