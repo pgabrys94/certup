@@ -53,7 +53,6 @@ class Remote:
             else os.path.join("/", "root", "certup")
         self.backup_path = os.path.join(self.path, "backup")
         self.verbose = verbose
-        self.file = "keystores/cacerts"
 
     def connect(self):
         """
@@ -102,7 +101,7 @@ class Remote:
         :return:
         """
         command = (f"keytool -importkeystore -deststorepass {destpwd} -trustcacerts -srckeystore"
-                   f" {os.path.join(self.path, self.file)} -srcstorepass {srcpwd} -noprompt")
+                   f" {os.path.join(self.path, "cacerts")} -srcstorepass {srcpwd} -noprompt")
         if self.verbose:
             print("Importowanie magazynu kluczy...")
         try:
@@ -139,10 +138,10 @@ class Remote:
             if self.verbose:
                 print("Wysyłanie...")
             sftp = self.terminal.open_sftp()
-            sftp.put(file, os.path.join(self.path, self.file))
+            sftp.put(file, os.path.join(self.path, "cacerts"))
             sftp.close()
             if self.verbose:
-                print("{}Wysłano: {}:{}{}".format(green, self.ip, os.path.join(self.path, self.file), reset))
+                print("{}Wysłano: {}:{}{}".format(green, self.ip, os.path.join(self.path, "cacerts"), reset))
         except Exception as err:
             if self.verbose:
                 print("{}Błąd wysyłania{}: {}".format(red, reset, err))
@@ -786,6 +785,7 @@ def refresh_all_statuses(outdated=False):
     if not host_status_fresh:
         host_status_fresh = True
         print("Odpytywanie hostów...", end="", flush=True)
+        time.sleep(1)
         for key in list(data()):
             connection_ok(key)
         print("\r" + " " * 30, end="", flush=True)
