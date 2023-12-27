@@ -240,7 +240,11 @@ def up_ks():
                 clean()
                 choosing_host = False
             elif choice.isdigit() and int(choice) in range(1, len(data()) + 1):
-                up_single(list(data())[int(choice) - 1])
+                if connection_ok(list(data())[int(choice) - 1]):
+                    up_single(list(data())[int(choice) - 1])
+                else:
+                    print("{}Błąd:{} Wskazany host jest niedostępny.".format(red, reset))
+                    print(try_again)
             else:
                 clean()
                 print(try_again)
@@ -595,6 +599,7 @@ def get_config():
 
 @clean_decor
 def salt_edit():
+    global host_status_fresh
     """
     Edycja wartości soli kryptograficznej.
     :return:
@@ -605,7 +610,9 @@ def salt_edit():
     else:
         data.salt = new_salt
         print("{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset))
+        host_status_fresh = False
         time.sleep(1)
+
 
 
 @clean_decor
@@ -891,20 +898,12 @@ while running:
         print("{}OPERUJESZ NA PLIKU: {}{}".format(green, ksfile, reset))
         get_config()
         if setup:
-            try:
-                menu.pop(menu.index(list(menu_full)[4]))
-            except Exception:
-                pass
             menu.insert(0, list(menu_full)[0])
             menu.insert(1, list(menu_full)[1])
             menu.insert(3, list(menu_full)[2])
             menu.insert(4, list(menu_full)[5])
-            if len(list(data())) > 0:
-                menu.insert(5, list(menu_full)[6])
-                menu.insert(6, list(menu_full)[7])
-            else:
-                menu.insert(5, list(menu_full)[7])
-        setup = False
+            menu.insert(5, list(menu_full)[7])
+            setup = False
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
         if jdk_present():
@@ -923,6 +922,8 @@ while running:
     print("\n{}".format(separator))
     for pos in menu:
         print("[{}] - {}".format(menu.index(pos) + 1, pos))
+    if len(list(data())) > 0:
+        print(f"\n[r] - {list(menu_full)[6]}")
     print("\n[q] - Zakończ")
 
     u_in = input("\nWybierz opcję, [Enter] zatwierdza: ")
@@ -930,6 +931,8 @@ while running:
         if u_in.isalpha() and u_in.lower() == "q":
             clean(True)
             exit()
+        elif u_in.isalpha() and u_in.lower() == "r":
+            refresh_all_statuses(True)
         elif u_in.isdigit() and int(u_in) <= 0:
             raise Exception("input less or equal to 0")
         elif menu[int(u_in) - 1] == list(menu_full)[6]:
