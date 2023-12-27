@@ -529,12 +529,15 @@ def select_keystore():
             choosing = False
         elif choice.isdigit():
             if int(choice) in range(1, len(files) + 1):
+                if ksfile == "":
+                    setup = True
+                else:
+                    setup = False
                 ksfile = files[int(choice) - 1]
                 ksfilefp = os.path.join(ksdir, ksfile)
                 datafile = ksfile + ".json"
                 datafilefp = os.path.join(datadir, datafile)
                 data.file = datafilefp
-                setup = True
                 choosing = False
                 keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
                 keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
