@@ -398,6 +398,7 @@ def ls_ks():
         input("\n[enter] - powrót...")
         clean()
 
+    @clean_decor
     def delete_cert(keystore):
         alias_inp = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
         try:
@@ -407,10 +408,13 @@ def ls_ks():
                 keystore.save(ksfilefp, keystore_pwd)
 
                 print(f"Usunięto certyfikat '{alias_inp}' z magazynu kluczy {ksfile}.")
+                time.sleep(2)
             else:
                 print(f"Nie znaleziono certyfikatu'{alias_inp}' w magazynie kluczy {ksfile}.")
+                time.sleep(2)
         except Exception as er:
             print("{}Błąd:{} {}".format(red, reset, er))
+            input("Kontynuuj...")
 
     choosing = True
 
