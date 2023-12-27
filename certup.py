@@ -632,7 +632,7 @@ def target_hosts():
         :return:
         """
         while True:
-            changed_to = input("{}".format(val))
+            changed_to = input("{}: ".format(val))
             try:
                 i = 1
                 if "IP" in val:
@@ -655,6 +655,7 @@ def target_hosts():
 
             except Exception as err:
                 print(err)
+                input("Kontynnuj...")
 
     @clean_decor
     def add_host():
@@ -692,7 +693,7 @@ def target_hosts():
         global host_status_fresh
         choosing_parameter = True
         values = data()[host_key]
-
+        print(values)
         while choosing_parameter:
             print(separator)
             print("Edytowany host: {}".format(host_key))
@@ -714,8 +715,10 @@ def target_hosts():
                 clean()
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 6):
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
-                data.create(host_key, values)
-                data.veil(data()[host_key][3])
+                data.create(host_key, [values])
+                print(values)
+                if int(parameter_choice) == 3:
+                    data.veil(data()[host_key][3])
                 host_status_fresh = False
                 data.save()
                 clean()
