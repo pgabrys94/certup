@@ -47,7 +47,7 @@ class Remote:
         self.port = port
         self.login = login
         self.pwd = pwd
-        self.commands = [command.strip() for command in command_list.split("#") if command]
+        self.commands = command_list
         self.terminal = paramiko.SSHClient()
         self.path = os.path.join("/", "home", self.login, "certup") if self.login != "root"\
             else os.path.join("/", "root", "certup")
@@ -650,6 +650,9 @@ def target_hosts():
                         raise Exception("Numer portu musi być liczbą z przedziału 1 - 65535")
                     else:
                         return changed_to
+                elif "Komendy" in val:
+                    changed_to = val.split("#").strip()
+                    return changed_to
                 else:
                     return changed_to
 
