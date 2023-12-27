@@ -9,6 +9,7 @@ import base64
 import textwrap
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 
 # Informacje
@@ -763,8 +764,23 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
     def proceed():
         try:
             for file in os.listdir(certdir):
-                subprocess.run(["keytool", "-import", "-trustedcacerts", "-alias", f"{file.split('.')[0]}",
-                                "-file", f"{os.path.join(certdir, file)}", "-storepass", f"{keystore_pwd}"])
+                try:
+                    if file.split(".")[1] == "crt":
+                        keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
+                        alias = file.split(".")[0]
+                        with open(os.path.join(certdir, file), 'rb') as crt_file:
+                            crt_data = crt_file.read()
+                        cert = x509.load_pem_x509_certificate(crt_data, default_backend())
+
+                        trusted_cert_entry = jks.TrustedCertEntry.new(
+                            alias=alias, cert=cert.public_bytes(serialization.Encoding.DER)
+                        )
+                        keystore.entries[alias] = trusted_cert_entry
+
+                        keystore.save(ksfilefp, keystore_pwd)
+                except Exception as err:
+                    print("{}Błąd: {}{}".format(red, reset, err))
+                    input("errPause")
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
             input("errPause")
@@ -773,7 +789,7 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
 #  UWAGA  #
 ###########
 
-Zostaną zaimportowane wszystkie pliki znajdujące się w katalogu ./certs
+Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu ./certs
 Kontynuować?
 """
 
@@ -815,7 +831,7 @@ if check_structure():
 menu = ["Wybierz plik magazynu kluczy"]
 menu_full = {
     "Wyświetl zawartość magazynu kluczy": ls_ks_pyjks,
-    "Zaimportuj certyfikaty PKCS12 do magazynu kluczy": cert_into_ks,
+    "Zaimportuj certyfikaty do magazynu kluczy": cert_into_ks,
     "Wykonaj zdalną aktualizację magazynów kluczy": up_ks,
     "Wybierz plik magazynu kluczy": select_keystore,
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_ks,
