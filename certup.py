@@ -780,7 +780,8 @@ def cert_into_ks():     # Dodać funkcję importowania nowych certyfikatów do w
                         keystore.save(ksfilefp, keystore_pwd)
                 except IndexError:
                     print("{}Błąd:{} Brak plików .crt w katalogu './certs'.".format(red, reset))
-                    time.sleep(1)
+                    print(cancel)
+                    time.sleep(2)
                 except Exception as err:
                     print("{}Błąd: {}{}".format(red, reset, err))
                     input("errPause")
