@@ -596,6 +596,8 @@ def get_config():
     if not os.path.exists(datafilefp):
         data.save()
     try:
+        for item in list(data()):
+            data.dispose(item)
         data.load()
     except Exception as err:
         print(err)
