@@ -500,6 +500,7 @@ def check_structure():
         print("Utworzono strukturę katalogów. "
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
         print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs' przed uruchomieniem programu.")
+        input("\n[enter] - zamknij")
         return True
 
 
