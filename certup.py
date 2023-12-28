@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Informacje
 name = "CertUp"
-version = 1.15
+version = 1.16
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
