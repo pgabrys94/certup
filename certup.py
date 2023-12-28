@@ -178,7 +178,13 @@ def clean_decor(func):
 
 @clean_decor
 def up_ks():
+    """
+    Funkcja zdalnej aktualizacji hostów docelowych.
+    """
     def execute(target):
+        """
+        Wywołanie funkcji na wyznaczonym hoście.
+        """
         target.connect()
         target.create_tree()
         target.upload(ksfilefp)
@@ -187,7 +193,10 @@ def up_ks():
         target.disconnect()
         return
 
-    def up_single(host):  # Wgraj na pojedyńczego hosta
+    def up_single(host):
+        """
+        Funkcja aktualizacji pojedyńczego hosta.
+        """
         target = Remote(host, data()[host][0], data()[host][1], data()[host][2],
                         data.unveil(data()[host][3]), data()[host][4], True)
 
@@ -196,7 +205,10 @@ def up_ks():
         return
 
     @clean_decor
-    def up_all():  # Wgraj na wszystkie hosty
+    def up_all():
+        """
+        Funkcja aktualizacji wszystkich dostępnych hostów.
+        """
         try:
             for key, value in data().items():
                 if conn_status[key]:
@@ -212,6 +224,9 @@ def up_ks():
 
     @clean_decor
     def choose_target():
+        """
+        Funkcja menu wyboru hosta docelowego.
+        """
         choosing_host = True
         while choosing_host:
             print(separator)
@@ -371,6 +386,9 @@ def ls_ks():
         :return:
         """
         def decode_date(code):
+            """
+            Odczytywanie daty utworzenia certyfikatu.
+            """
             cert_data = code.cert
             x509_cert = x509.load_der_x509_certificate(cert_data, default_backend())
             not_before = x509_cert.not_valid_before
@@ -405,6 +423,9 @@ def ls_ks():
 
     @clean_decor
     def delete_cert(keystore):
+        """
+        Funkcja usuwająca certyfikat z magazynu kluczy.
+        """
         alias_inp = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
         try:
             if alias_inp in keystore.entries:
@@ -788,6 +809,9 @@ def target_hosts():
 
 
 def refresh_all_statuses(outdated=False):
+    """
+    Funkcja sprawdzająca, czy host odpowiada po przedłożeniu poświadczeń.
+    """
     global host_status_fresh
     if outdated:
         host_status_fresh = False
@@ -804,6 +828,9 @@ def refresh_all_statuses(outdated=False):
 
 @clean_decor
 def cert_into_ks():
+    """
+    Funkcja importowania certyfikatów do magazynu kluczy.
+    """
 
     def proceed():
         try:
