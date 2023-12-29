@@ -784,6 +784,9 @@ def target_hosts():
                 clean()
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 7):
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
+                print(host_key)
+                print(values)
+                input("pause")
                 data.create(host_key, values)
                 if int(parameter_choice) - 1 == 3:
                     data.veil(host_key, 3)
