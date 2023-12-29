@@ -32,6 +32,7 @@ keystore_pwd = ""                               # Hasło magazynu kluczy.
 uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy"]     # Lista powtarzających się wartości w menu.
 conn_status = {}                                # Przechowuje informację o statusie połączenia poszczególnych hostów.
 host_status_fresh = False                       # Flaga odświeżania statusu połączenia z hostami zdalnymi.
+cert_count = None                               # Licznik ilości certyfikatów w magazynie kluczy.
 
 # Utworzenie instancji klasy parametrów.
 data = Conson()
@@ -473,7 +474,7 @@ def ls_ks():
     try:
         java_keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
 
-        cert_count = 0
+        global cert_count
 
         lsmenu = [
             f"Wyświetl wszystkie nazwy ({cert_count})",
