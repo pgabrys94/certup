@@ -521,7 +521,7 @@ def check_structure():
         print("Utworzono strukturę katalogów. "
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
         print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs' przed uruchomieniem programu.")
-        print("Jeżeli chcesz wygenerować certyfikaty self-signed, umieść pliki '.cnf' w certs/domains_cnf")
+        print("Jeżeli chcesz wygenerować certyfikaty self-signed, umieść pliki '.cnf' w katalogu 'certs/domains_cnf'.")
         input("\n[enter] - zamknij")
         return True
 
@@ -870,41 +870,44 @@ def refresh_all_statuses(outdated=False):
 
 @clean_decor
 def ss_cert_gen():
-    print("""
-UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
-Należy nadać im przyjazną nazwę, np. moja_domena.cnf
-""")
-    for file in os.listdir(certcnfdir):
-        skip = False
-        createfp = os.path.join(certdir, file)
-        while True:
-            time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
-                               f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
-            if time_valid.isdigit():
-                break
-            elif time_valid == "":
-                print("{}Pomijam {}...{}".format(blue, file, reset))
-                time.sleep(1)
-                skip = True
-        if file.split(".")[0] != "domain" and not skip:
-            subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
-                            "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
-                            "-out", f"{createfp}.crt" "-config" f"{createfp}.cnf"])
+    try:
+        print("""
+    UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
+    Należy nadać im przyjazną nazwę, np. moja_domena.cnf
+    """)
+        for file in os.listdir(certcnfdir):
+            skip = False
+            createfp = os.path.join(certdir, file)
+            while True:
+                time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
+                                   f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
+                if time_valid.isdigit():
+                    break
+                elif time_valid == "":
+                    print("{}Pomijam {}...{}".format(blue, file, reset))
+                    time.sleep(1)
+                    skip = True
+            if file.split(".")[0] != "domain" and not skip:
+                subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
+                                "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
+                                "-out", f"{createfp}.crt" "-config" f"{createfp}.cnf"])
 
-            if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
-                print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
-                pkcspass = input("Wprowadź hasło dla magazynu PKCS12 '{}.p12' (domyślnie: 'password'): ".format(file))
-                pkcspasswd = "password" if pkcspass == "" else pkcspass
-                subprocess.run(["openssl", "pkcs12", "-export", "-in", f"{createfp}.crt", "-inkey", f"{createfp}.key",
-                                "-name", f"{file}", "-out", f"{createfp}.p12", "-passout", f"pass:{pkcspasswd}"])
-                if os.path.exists(f"{createfp}.p12"):
-                    print("{}Pomyślnie utworzono magazyn PKCS12.{}".format(green, reset))
+                if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
+                    print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
+                    pkcspass = input("Wprowadź hasło dla magazynu PKCS12 '{}.p12' (domyślnie: 'password'): ".format(file))
+                    pkcspasswd = "password" if pkcspass == "" else pkcspass
+                    subprocess.run(["openssl", "pkcs12", "-export", "-in", f"{createfp}.crt", "-inkey", f"{createfp}.key",
+                                    "-name", f"{file}", "-out", f"{createfp}.p12", "-passout", f"pass:{pkcspasswd}"])
+                    if os.path.exists(f"{createfp}.p12"):
+                        print("{}Pomyślnie utworzono magazyn PKCS12.{}".format(green, reset))
+                    else:
+                        print("{}Wystąpił błąd tworzenia magazynu PKCS12. "
+                              "Magazyn nie został utworzony.{}".format(red, reset))
                 else:
-                    print("{}Wystąpił błąd tworzenia magazynu PKCS12. "
-                          "Magazyn nie został utworzony.{}".format(red, reset))
-            else:
-                print("{}Wystąpił błąd tworzenia plików certyfikatu. "
-                      "Certyfikat nie został utworzony.{}".format(red, reset))
+                    print("{}Wystąpił błąd tworzenia plików certyfikatu. "
+                          "Certyfikat nie został utworzony.{}".format(red, reset))
+    except Exception as err:
+        print("Błąd: ", err)
 
 
 @clean_decor
@@ -1007,7 +1010,7 @@ menu_full = {
     "Hosty docelowe": target_hosts,
     "Odśwież status połączenia": refresh_all_statuses,
     "Zmień sól": salt_edit,
-    "Wygeneruj nowe certyfikaty self-sign": ss_cert_gen
+    "Wygeneruj nowe certyfikaty self-signed": ss_cert_gen
 }
 
 # Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
