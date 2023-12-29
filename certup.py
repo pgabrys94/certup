@@ -889,6 +889,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                 while True:
                     if file.split(".")[0] == "domain":
                         skip = True
+                        break
                     else:
                         time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
                                            f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
