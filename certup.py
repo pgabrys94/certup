@@ -879,7 +879,7 @@ def ss_cert_gen():
 UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
 Należy nadać im przyjazną nazwę, np. moja_domena.cnf
 """)
-        input("[enter] - kontynuuj...")
+        input("\n[enter] - kontynuuj...")
         clean()
         if len(os.listdir(certcnfdir)) > 0:
             for file in os.listdir(certcnfdir):
@@ -916,9 +916,9 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                         print("{}Wystąpił błąd tworzenia plików certyfikatu. "
                               "Certyfikat nie został utworzony.{}".format(red, reset))
         else:
-            print("Nie znaleziono plików konfiguracyjnych niezbędnych do utworzenia certyfikatów i kluczy.")
+            print("Nie znaleziono plików .cnf niezbędnych do utworzenia certyfikatów i kluczy.")
             print("Upewnij się że pliki '<nazwa>.cnf' istnieją w katalogu './certs/domains_cnf'")
-            time.sleep(2)
+            input("\n[enter] - kontynuuj...")
     except Exception as err:
         print("Błąd: ", err)
         input("Kontynuuj...")
