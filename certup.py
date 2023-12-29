@@ -705,15 +705,11 @@ def target_hosts():
                     if len(changed_to.split(".")) < 4:
                         raise Exception("Niepoprawny format adresu IP.")
                     else:
-                        print("zmiana na:",changed_to)
-                        input("pause")
                         return changed_to
                 elif "Port" in val:
                     if not changed_to.isdigit() or int(changed_to) not in range(1, 65536):
                         raise Exception("Numer portu musi być liczbą z przedziału 1 - 65535")
                     else:
-                        print("zmiana na:", changed_to)
-                        input("pause")
                         return changed_to
                 elif "Komendy" in val:
                     commands = changed_to.split("#")
@@ -723,8 +719,6 @@ def target_hosts():
                             clean_commands.append(command.strip())
                     return clean_commands
                 else:
-                    print("zmiana na:", changed_to)
-                    input("pause")
                     return changed_to
 
             except Exception as err:
@@ -770,8 +764,6 @@ def target_hosts():
         choosing_parameter = True
         values = data()[host_key]
         while choosing_parameter:
-            for item in data()[host_key]:
-                print(item)
             print(separator)
             print("Edytowany host: {}".format(host_key))
             print(separator)
@@ -792,17 +784,11 @@ def target_hosts():
                 clean()
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 7):
                 values[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
-                print(host_key)
-                print(values)
-                input("pause")
                 data.create(host_key, values)
                 if int(parameter_choice) - 1 == 3:
                     data.veil(host_key, 3)
                 if int(parameter_choice) - 1 == 4:
                     data.veil(host_key, 4)
-                print(host_key)
-                print(values)
-                input("pause2")
                 host_status_fresh = False
                 data.save()
                 clean()
