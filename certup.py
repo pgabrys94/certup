@@ -787,7 +787,7 @@ def target_hosts():
                 data.create(host_key, values)
                 if int(parameter_choice) == 3:
                     data.veil(data()[host_key][3])
-                elif int(parameter_choice) == 4:
+                if int(parameter_choice) == 4:
                     data.veil(data()[host_key][4])
                 host_status_fresh = False
                 data.save()
@@ -893,7 +893,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                         break
                     else:
                         time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
-                                           f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
+                                           f" '{file}'\n[enter] bez wartości pomija plik: ")
                         if time_valid.isdigit():
                             break
                         elif time_valid == "":
@@ -909,7 +909,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                     if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
                         print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
                         pkcspass = input("Wprowadź hasło dla magazynu PKCS12 '{}.p12'"
-                                         " (domyślnie: 'password'): ".format(file))
+                                         " (domyślnie: 'password'): ".format(file.split(".")[0]))
                         pkcspasswd = "password" if pkcspass == "" else pkcspass
                         subprocess.run(["openssl", "pkcs12", "-export", "-in", f"{createfp}.crt", "-inkey",
                                         f"{createfp}.key", "-name", f"{file}", "-out", f"{createfp}.p12",
