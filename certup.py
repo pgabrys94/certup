@@ -885,6 +885,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
             for file in os.listdir(certcnfdir):
                 skip = False
                 filename = file.split(".")[0]
+                time_valid = 0
                 createfp = os.path.join(certdir, f"{ksfile}_certs", filename)
                 while True:
                     if file.split(".")[0] == "domain":
@@ -900,11 +901,10 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                             break
                 if not skip:
                     print("Tworzenie plików dla {}".format(file))
-                    print(os.path.join(certcnfdir, file))
                     time.sleep(1)
                     subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
                                     "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
-                                    "-out", f"{createfp}.crt" "-config" f"{os.path.join(certcnfdir, file)}"])
+                                    "-out", f"{createfp}.crt", "-config", f"{os.path.join(certcnfdir, file)}"])
 
                     if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
                         print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
