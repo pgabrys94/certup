@@ -898,6 +898,8 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                             skip = True
                             break
                 if not skip:
+                    print("Tworzenie plików dla {}".format(file))
+                    time.sleep(1)
                     subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
                                     "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
                                     "-out", f"{createfp}.crt" "-config" f"{createfp}.cnf"])
@@ -916,9 +918,11 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                         else:
                             print("{}Wystąpił błąd tworzenia magazynu PKCS12. "
                                   "Magazyn nie został utworzony.{}".format(red, reset))
+                            input("\n[enter] - kontynuuj...")
                     else:
                         print("{}Wystąpił błąd tworzenia plików certyfikatu. "
                               "Certyfikat nie został utworzony.{}".format(red, reset))
+                        input("\n[enter] - kontynuuj...")
                 else:
                     print("{}Pomijam {}...{}".format(blue, file, reset))
                     time.sleep(1)
