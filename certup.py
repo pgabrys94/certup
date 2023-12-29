@@ -756,7 +756,7 @@ def target_hosts():
             print("{}: {}".format(uni_val[1], values[1]))
             print("{}: {}".format(uni_val[2], values[2]))
             print(separator)
-            print("{}: {}".format(uni_val[4], values[4]))
+            print("{}: {}".format(uni_val[5], values[5]))
             print(separator)
 
             for opt in uni_val:
