@@ -60,7 +60,7 @@ class Remote:
 
     def connect(self):
         """
-        Funkcja otwierająca połączenie SSH pomiędzy hostem źródłowym a docelowym.
+        Metoda otwierająca połączenie SSH pomiędzy hostem źródłowym a docelowym.
         :return:
         """
         try:
@@ -95,7 +95,7 @@ class Remote:
 
     def create_tree(self):
         """
-        Funkcja tworząca strukturę katalogów na hoście docelowym.
+        Metoda tworząca strukturę katalogów na hoście docelowym.
         :return:
         """
         with self.terminal.open_sftp() as sftp:
@@ -112,7 +112,7 @@ class Remote:
 
     def import_jks(self, srcpwd, destpwd):
         """
-        Funkcja wykonująca komendę importowania przesłanego magazynu kluczy do lokalnego magazynu na hoście docelowym.
+        Metoda wykonująca komendę importowania przesłanego magazynu kluczy do lokalnego magazynu na hoście docelowym.
         :param srcpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
         :param destpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
         :return:
@@ -134,7 +134,7 @@ class Remote:
 
     def run(self):
         """
-        Funkcja wykonywania komend na hoście zdalnym.
+        Metoda wykonywania komend na hoście zdalnym.
         :return:
         """
         if self.commands:
@@ -153,7 +153,7 @@ class Remote:
 
     def upload(self, file):
         """
-        Funkcja odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego.
+        Metoda odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego.
         :param file: Pełna ścieżka do pliku magazynu kluczy.
         :return:
         """
@@ -511,15 +511,12 @@ def check_structure():
     :return:
     """
     need_restart = False
-    if not os.path.exists(datadir):
-        os.mkdir(datadir)
-        need_restart = True
-    if not os.path.exists(ksdir):
-        os.mkdir(ksdir)
-        need_restart = True
-    if not os.path.exists(certdir):
-        os.mkdir(certdir)
-        need_restart = True
+    dirlist = [datadir, ksdir, certdir, certcnfdir]
+    for directory in dirlist:
+        if not os.path.exists(directory):
+            os.mkdir(directory)
+            need_restart = True
+
     if need_restart:
         print("Utworzono strukturę katalogów. "
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
