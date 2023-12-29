@@ -18,19 +18,20 @@ version = 1.20
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
-ksdir = os.path.join(os.getcwd(), "keystores")
-ksfile = ""
-ksfilefp = ""
-certdir = os.path.join(os.getcwd(), "certs")
-datadir = os.path.join(os.getcwd(), "configs")
-datafile = None
-datafilefp = ""
-setup = False
-error = ""  # pozwala na wyświetlenie błędu przy nieosiągalnym hoście docelowym.
-keystore_pwd = ""
-uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy"]
-conn_status = {}
-host_status_fresh = False
+ksdir = os.path.join(os.getcwd(), "keystores")  # Ścieżka do katalogu magazynów kluczy.
+ksfile = ""                                     # Nazwa wybranego magazynu kluczy, na którym operujemy.
+ksfilefp = ""                                   # Ścieżka absolutna do wybranego magazynu kluczy.
+certdir = os.path.join(os.getcwd(), "certs")    # Ścieżka do katalogu certyfikatów.
+certcnfdir = os.path.join(certdir, "domains_cnf")   # Ścieżka plików konfiguracyjnych dla generatora certyfikatów.
+datadir = os.path.join(os.getcwd(), "configs")  # Ścieżka do plików konfiguracyjnych.
+datafile = None                                 # Nazwa pliku konfiguracyjnego - oparta o nazwę magazynu kluczy.
+datafilefp = ""                                 # Ścieżka absolutna do pliku konfiguracyjnego.
+setup = False                                   # Flaga pierwszego wyboru pliku konfiguracyjnego, wykorzystywana w menu.
+error = ""                                      # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
+keystore_pwd = ""                               # Hasło magazynu kluczy.
+uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy"]     # Lista powtarzających się wartości w menu.
+conn_status = {}                                # Przechowuje informację o statusie połączenia poszczególnych hostów.
+host_status_fresh = False                       # Flaga odświeżania statusu połączenia z hostami zdalnymi.
 
 # Utworzenie instancji klasy parametrów.
 data = Conson()
@@ -523,6 +524,7 @@ def check_structure():
         print("Utworzono strukturę katalogów. "
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
         print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs' przed uruchomieniem programu.")
+        print("Jeżeli chcesz wygenerować certyfikaty self-signed, umieść pliki '.cnf' w certs/domains_cnf")
         input("\n[enter] - zamknij")
         return True
 
@@ -537,6 +539,14 @@ def jdk_present():
         for line in result:
             if "openjdk version" in line:
                 return True
+    except Exception:
+        return False
+
+
+def openssl_present():
+    try:
+        subprocess.run(["openssl", "version"])
+        return True
     except Exception:
         return False
 
@@ -857,8 +867,43 @@ def refresh_all_statuses(outdated=False):
     return
 
 
-def cert_gen():
-    pass
+@clean_decor
+def ss_cert_gen():
+    print("""
+UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
+Należy nadać im przyjazną nazwę, np. moja_domena.cnf
+""")
+    for file in os.listdir(certcnfdir):
+        skip = False
+        createfp = os.path.join(certdir, file)
+        while True:
+            time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
+                               f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
+            if time_valid.isdigit():
+                break
+            elif time_valid == "":
+                print("{}Pomijam {}...{}".format(blue, file, reset))
+                time.sleep(1)
+                skip = True
+        if file.split(".")[0] != "domain" and not skip:
+            subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
+                            "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
+                            "-out", f"{createfp}.crt" "-config" f"{createfp}.cnf"])
+
+            if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
+                print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
+                pkcspass = input("Wprowadź hasło dla magazynu PKCS12 '{}.p12' (domyślnie: 'password'): ".format(file))
+                pkcspasswd = "password" if pkcspass == "" else pkcspass
+                subprocess.run(["openssl", "pkcs12", "-export", "-in", f"{createfp}.crt", "-inkey", f"{createfp}.key",
+                                "-name", f"{file}", "-out", f"{createfp}.p12", "-passout", f"pass:{pkcspasswd}"])
+                if os.path.exists(f"{createfp}.p12"):
+                    print("{}Pomyślnie utworzono magazyn PKCS12.{}".format(green, reset))
+                else:
+                    print("{}Wystąpił błąd tworzenia magazynu PKCS12. "
+                          "Magazyn nie został utworzony.{}".format(red, reset))
+            else:
+                print("{}Wystąpił błąd tworzenia plików certyfikatu. "
+                      "Certyfikat nie został utworzony.{}".format(red, reset))
 
 
 @clean_decor
@@ -870,7 +915,7 @@ def cert_into_ks():
     def proceed():
         try:
             i = 0
-            for file in os.listdir(certdir):
+            for file in os.listdir(os.path.join(certdir, ksfile)):
                 try:
                     if file.split(".")[1] == "crt":
                         keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
@@ -912,9 +957,9 @@ def cert_into_ks():
 #   UWAGA   #
 #############
 
-Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu './certs'.
+Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu './certs/{}'.
 Kontynuować?
-"""
+""".format(ksfile)
 
     print(warn)
     choosing = True
@@ -961,7 +1006,7 @@ menu_full = {
     "Hosty docelowe": target_hosts,
     "Odśwież status połączenia": refresh_all_statuses,
     "Zmień sól": salt_edit,
-    "Wygeneruj nowe certyfikaty": cert_gen
+    "Wygeneruj nowe certyfikaty self-sign": ss_cert_gen
 }
 
 # Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
@@ -969,17 +1014,18 @@ running = True
 while running:
     clean()
     if ksfile != "":
-        print("{}OPERUJESZ NA PLIKU: {}{}".format(green, ksfile, reset))
+        print("{}OPERUJESZ NA PLIKU: {}{}".format(blue, reset, ksfile))
         get_config()
 
         if setup:
             menu.insert(0, list(menu_full)[0])
             menu.insert(1, list(menu_full)[1])
-            menu.insert(2, list(menu_full)[8])
             menu.insert(5, list(menu_full)[2])
             menu.insert(6, list(menu_full)[5])
             menu.insert(7, list(menu_full)[7])
             setup = False
+            if openssl_present():
+                menu.insert(2, list(menu_full)[8])
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
         if jdk_present():
