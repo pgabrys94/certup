@@ -915,12 +915,15 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                                         "-passout", f"pass:{pkcspasswd}"])
                         if os.path.exists(f"{createfp}.p12"):
                             print("{}Pomyślnie utworzono magazyn PKCS12.{}".format(green, reset))
+                            input("\n[enter] - kontynuuj...")
                         else:
                             print("{}Wystąpił błąd tworzenia magazynu PKCS12. "
                                   "Magazyn nie został utworzony.{}".format(red, reset))
                     else:
                         print("{}Wystąpił błąd tworzenia plików certyfikatu. "
                               "Certyfikat nie został utworzony.{}".format(red, reset))
+                else:
+                    print("{}Pomijam {}...{}".format(blue, file, reset))
         else:
             print("Nie znaleziono plików .cnf niezbędnych do utworzenia certyfikatów i kluczy.")
             print("Upewnij się że pliki '<nazwa>.cnf' istnieją w katalogu './certs/domains_cnf'")
