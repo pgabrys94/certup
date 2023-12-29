@@ -886,15 +886,18 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                 skip = False
                 createfp = os.path.join(certdir, ksfile, file)
                 while True:
-                    time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
-                                       f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
-                    if time_valid.isdigit():
-                        break
-                    elif time_valid == "":
-                        print("{}Pomijam {}...{}".format(blue, file, reset))
-                        time.sleep(1)
+                    if file.split(".")[0] != "domain":
                         skip = True
-                if file.split(".")[0] != "domain" and not skip:
+                    else:
+                        time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
+                                           f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
+                        if time_valid.isdigit():
+                            break
+                        elif time_valid == "":
+                            print("{}Pomijam {}...{}".format(blue, file, reset))
+                            time.sleep(1)
+                            skip = True
+                if not skip:
                     subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
                                     "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
                                     "-out", f"{createfp}.crt" "-config" f"{createfp}.cnf"])
