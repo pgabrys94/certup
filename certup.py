@@ -903,7 +903,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                     time.sleep(1)
                     subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
                                     "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
-                                    "-out", f"{createfp}.crt" "-config" f"{createfp}.cnf"])
+                                    "-out", f"{createfp}.crt" "-config" f"{os.path.join(certcnfdir, file)}"])
 
                     if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
                         print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
