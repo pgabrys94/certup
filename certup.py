@@ -28,7 +28,7 @@ datafilefp = ""
 setup = False
 error = ""  # pozwala na wyświetlenie błędu przy nieosiągalnym hoście docelowym.
 keystore_pwd = ""
-uni_val = ["IP", "Port", "Login", "Hasło", "Komendy"]
+uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy"]
 conn_status = {}
 host_status_fresh = False
 
@@ -41,18 +41,21 @@ class Remote:
     Klasa tworząca obiekty do manipulacji zdalnym hostem. Atrybutami instancji takiej klasy są dane zawarte
     w słowniku parametrów instancji conson.
     """
-    def __init__(self, hostname, ip, port, login, pwd, command_list, verbose=False):
+    def __init__(self, hostname, ip, port, login, pwd, sudopwd, command_list, verbose=False):
         self.hostname = hostname
         self.ip = ip
         self.port = port
         self.login = login
         self.pwd = pwd
+        self.sudopwd = sudopwd
         self.commands = command_list
         self.terminal = paramiko.SSHClient()
         self.path = os.path.join("/", "home", self.login, "certup") if self.login != "root"\
             else os.path.join("/", "root", "certup")
         self.backup_path = os.path.join(self.path, "backup")
         self.verbose = verbose
+
+        self.iterator = 0
 
     def connect(self):
         """
@@ -77,6 +80,18 @@ class Remote:
         if self.verbose:
             print("{}ROZŁĄCZONO z {}{}".format(green, self.hostname, reset))
 
+    def go_sudo(self, command):
+        """
+        Wykonywanie polecenia z uprawnieniami administratora, jeżeli zalogowano do konta innego niż root.
+        """
+        try:
+            self.terminal.exec_command(f'echo {self.sudopwd} | sudo -S {command}')
+            self.iterator += 1
+            if self.iterator == 1:
+                print("{}SUDO OK{}".format(green, reset))
+        except Exception as err:
+            print("{}Błąd nabywania uprawnień:{} {}".format(red, reset, err))
+
     def create_tree(self):
         """
         Funkcja tworząca strukturę katalogów na hoście docelowym.
@@ -90,6 +105,7 @@ class Remote:
                 print("Tworzenie struktury katalogów...")
                 try:
                     sftp.mkdir(self.path)
+                    print("{}Utworzono ścieżki.{}".format(green, reset))
                 except Exception as err:
                     print("{}Błąd tworzenia struktury katalogów: {}".format(red, reset), err)
 
@@ -105,7 +121,10 @@ class Remote:
         if self.verbose:
             print("Importowanie magazynu kluczy...")
         try:
-            self.terminal.exec_command(command)
+            if self.login != "root":
+                self.go_sudo(command)
+            else:
+                self.terminal.exec_command(command)
             if self.verbose:
                 print("{}Zaimportowano magazyn kluczy.{}".format(green, reset))
         except Exception as err:
@@ -122,7 +141,10 @@ class Remote:
                 try:
                     if self.verbose:
                         print("Wykonywanie komendy: {}".format(command))
-                    self.terminal.exec_command(command)
+                    if self.login != "root":
+                        self.go_sudo(command)
+                    else:
+                        self.terminal.exec_command(command)
                     time.sleep(1)
                 except Exception as err:
                     if self.verbose:
@@ -198,7 +220,7 @@ def up_ks():
         Funkcja aktualizacji pojedyńczego hosta.
         """
         target = Remote(host, data()[host][0], data()[host][1], data()[host][2],
-                        data.unveil(data()[host][3]), data()[host][4], True)
+                        data.unveil(data()[host][3]), data.unveil(data()[host][4]), data()[host][5], True)
 
         execute(target)
         input("\n[enter] - kontynuuuj...")
@@ -212,7 +234,8 @@ def up_ks():
         try:
             for key, value in data().items():
                 if conn_status[key]:
-                    target = Remote(key, value[0], value[1], value[2], data.unveil(value[3]), value[4], True)
+                    target = Remote(key, value[0], value[1], value[2], data.unveil(value[3]),
+                                    data.unveil(value[4]), value[5], True)
 
                     execute(target)
 
@@ -700,15 +723,17 @@ def target_hosts():
             f"{uni_val[1]}: ": None,
             f"{uni_val[2]}: ": None,
             f"{uni_val[3]}: ": None,
-            f"{uni_val[4]} do wykonania na hoście\n(każdą komendę oddziel znakiem #): ": []
+            f"{uni_val[4]}: ": None,
+            f"{uni_val[5]} do wykonania na hoście\n(każdą komendę oddziel znakiem #): ": []
         }
         vrsl = list(vrs)
 
         for var in vrsl:
             vrs[var] = new_value(var.split(":")[0])
-        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]]]}
+        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]], vrs[vrsl[6]]]}
         data.create(vrs[vrsl[0]], values[vrs[vrsl[0]]])
         data.veil(vrs[vrsl[0]], 3)
+        data.veil(vrs[vrsl[0]], 4)
         data.save()
         host_status_fresh = False
         return
@@ -747,6 +772,8 @@ def target_hosts():
                 data.create(host_key, values)
                 if int(parameter_choice) == 3:
                     data.veil(data()[host_key][3])
+                elif int(parameter_choice) == 4:
+                    data.veil(data()[host_key][4])
                 host_status_fresh = False
                 data.save()
                 clean()
