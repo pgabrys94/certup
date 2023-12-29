@@ -520,7 +520,8 @@ def check_structure():
     if need_restart:
         print("Utworzono strukturę katalogów. "
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
-        print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs' przed uruchomieniem programu.")
+        print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs/<nazwa magazynu kluczy>_certs'"
+              " przed uruchomieniem programu.")
         print("Jeżeli chcesz wygenerować certyfikaty self-signed, umieść pliki '.cnf' w katalogu 'certs/domains_cnf'.")
         input("\n[enter] - zamknij")
         return True
@@ -642,10 +643,13 @@ def get_config():
     """
     Funkcja wczytująca istniejący plik konfiguracyjny przypisany do magazynu kluczy LUB tworząca pusty plik
      w formacie: <nazwa magazynu>.json
+     Tworzy także dodatkowe niezbędne struktury katalogów, jeżeli ich brak..
     :return:
     """
     if not os.path.exists(datafilefp):
         data.save()
+    if not os.path.exists(os.path.join(certdir, f"{ksfile}_certs")):
+        os.makedirs(os.path.join(certdir, f"{ksfile}_certs"), exist_ok=True)
     try:
         data.dump()
         data.load()
@@ -670,7 +674,6 @@ def salt_edit():
         print("{}KLUCZ ZOSTAŁ ZMIENIONY{}".format(green, reset))
         host_status_fresh = False
         time.sleep(2)
-
 
 
 @clean_decor
@@ -894,10 +897,12 @@ def ss_cert_gen():
 
                 if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
                     print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
-                    pkcspass = input("Wprowadź hasło dla magazynu PKCS12 '{}.p12' (domyślnie: 'password'): ".format(file))
+                    pkcspass = input("Wprowadź hasło dla magazynu PKCS12 '{}.p12'"
+                                     " (domyślnie: 'password'): ".format(file))
                     pkcspasswd = "password" if pkcspass == "" else pkcspass
-                    subprocess.run(["openssl", "pkcs12", "-export", "-in", f"{createfp}.crt", "-inkey", f"{createfp}.key",
-                                    "-name", f"{file}", "-out", f"{createfp}.p12", "-passout", f"pass:{pkcspasswd}"])
+                    subprocess.run(["openssl", "pkcs12", "-export", "-in", f"{createfp}.crt", "-inkey",
+                                    f"{createfp}.key", "-name", f"{file}", "-out", f"{createfp}.p12",
+                                    "-passout", f"pass:{pkcspasswd}"])
                     if os.path.exists(f"{createfp}.p12"):
                         print("{}Pomyślnie utworzono magazyn PKCS12.{}".format(green, reset))
                     else:
@@ -937,7 +942,7 @@ def cert_into_ks():
                         keystore.save(ksfilefp, keystore_pwd)
                         i += 1
                 except IndexError:
-                    print("{}Błąd:{} Brak plików .crt w katalogu './certs'.".format(red, reset))
+                    print("{}Błąd:{} Brak plików .crt w katalogu './certs/{}_certs'.".format(red, reset, ksfile))
                     print(cancel)
                     time.sleep(2)
                 except Exception as err:
@@ -1030,7 +1035,8 @@ while running:
             menu.insert(7, list(menu_full)[7])
             setup = False
             if openssl_present():
-                menu.insert(2, list(menu_full)[8])
+                if list(menu_full)[8] not in menu:
+                    menu.insert(2, list(menu_full)[8])
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
         if jdk_present():
