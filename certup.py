@@ -786,9 +786,9 @@ def target_hosts():
                 value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key, values)
                 if int(parameter_choice) == 3:
-                    data.veil(data()[host_key][3])
+                    data.veil(host_key, 4)
                 if int(parameter_choice) == 4:
-                    data.veil(data()[host_key][4])
+                    data.veil(host_key, 4)
                 host_status_fresh = False
                 data.save()
                 clean()
