@@ -925,12 +925,13 @@ def cert_into_ks():
     def proceed():
         try:
             i = 0
-            for file in os.listdir(os.path.join(certdir, ksfile)):
+            certsdir = os.path.join(certdir, f"{ksfile}_certs")
+            for file in os.listdir(certsdir):
                 try:
                     if file.split(".")[1] == "crt":
                         keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
                         alias = file.split(".")[0]
-                        with open(os.path.join(certdir, file), 'rb') as crt_file:
+                        with open(os.path.join(certsdir, file), 'rb') as crt_file:
                             crt_data = crt_file.read()
                         cert = x509.load_pem_x509_certificate(crt_data, default_backend())
 
@@ -967,7 +968,7 @@ def cert_into_ks():
 #   UWAGA   #
 #############
 
-Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu './certs/{}'.
+Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu './certs/{}_certs'.
 Kontynuować?
 """.format(ksfile)
 
