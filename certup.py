@@ -473,7 +473,7 @@ def ls_ks():
     try:
         java_keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
 
-        cert_count = len(java_keystore.certs)
+        cert_count = 0
 
         lsmenu = [
             f"Wyświetl wszystkie nazwy ({cert_count})",
@@ -482,6 +482,7 @@ def ls_ks():
             ]
 
         while choosing:
+            cert_count = len(java_keystore.certs)
             for lspos in lsmenu:
                 print("[{}] - {}".format(lsmenu.index(lspos) + 1, lspos))
             print("\n[c] - powrót\n")
@@ -968,7 +969,10 @@ def cert_into_ks():
 #   UWAGA   #
 #############
 
-Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu './certs/{}_certs'.
+Zostaną zaimportowane wszystkie pliki .crt znajdujące się w katalogu: 
+
+'./certs/{}_certs'
+
 Kontynuować?
 """.format(ksfile)
 
