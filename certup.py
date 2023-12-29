@@ -957,7 +957,7 @@ def cert_into_ks():
                     odmiana = no_wez_odmien[1]
                 else:
                     odmiana = no_wez_odmien[2]
-                print("{}SUKCES:{} zaimportowano {} {}}.".format(green, reset, i, odmiana))
+                print("{}SUKCES:{} zaimportowano {} {}.".format(green, reset, i, odmiana))
                 time.sleep(2)
         except Exception as err:
             print("{}Błąd: {}{}".format(red, reset, err))
