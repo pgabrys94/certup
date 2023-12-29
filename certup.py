@@ -764,8 +764,8 @@ def target_hosts():
         choosing_parameter = True
         values = data()[host_key]
         while choosing_parameter:
-            for item in list(data()):
-                print(data()[item])
+            for item in data()[host_key]:
+                print(item)
             print(separator)
             print("Edytowany host: {}".format(host_key))
             print(separator)
