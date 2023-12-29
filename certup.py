@@ -459,11 +459,13 @@ def ls_ks():
 
                 print(f"Usunięto certyfikat '{alias_inp}' z magazynu kluczy '{ksfile}'.")
                 time.sleep(2)
+                return
             elif alias_inp.strip() == "":
                 print(cancel)
             else:
                 print(f"Nie znaleziono certyfikatu '{alias_inp}' w magazynie kluczy '{ksfile}'.")
                 time.sleep(2)
+                return
         except Exception as er:
             print("{}Błąd:{} {}".format(red, reset, er))
             input("Kontynuuj...")
