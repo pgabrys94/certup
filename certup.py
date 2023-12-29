@@ -787,9 +787,9 @@ def target_hosts():
                 data.create(host_key, values)
                 print("wybór: ",parameter_choice)
                 input("Pauza")
-                if int(parameter_choice) == 3:
-                    data.veil(host_key, 4)
-                if int(parameter_choice) == 4:
+                if int(parameter_choice) - 1 == 3:
+                    data.veil(host_key, 3)
+                if int(parameter_choice) - 1 == 4:
                     data.veil(host_key, 4)
                 host_status_fresh = False
                 data.save()
