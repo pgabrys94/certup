@@ -947,7 +947,7 @@ try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 if check_structure():
     exit()
 
-menu = ["Wybierz plik magazynu kluczy", "Wygeneruj nowy certyfikat"]
+menu = ["Wybierz plik magazynu kluczy","Wyeksportuj i użyj lokalnego magazynu kluczy", "Wygeneruj nowy certyfikat"]
 menu_full = {
     "Wyświetl zawartość magazynu kluczy": ls_ks,
     "Zaimportuj certyfikaty do magazynu kluczy": cert_into_ks,
@@ -976,9 +976,9 @@ while running:
             setup = False
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
-        if jdk_present():
-            if list(menu_full)[4] not in menu:
-                menu.insert(3, list(menu_full)[4])
+        if not jdk_present():
+            if list(menu_full)[4] in menu:
+                menu.pop(menu.index(list(menu_full)[4]))
 
 
 # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
