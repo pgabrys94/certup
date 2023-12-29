@@ -908,6 +908,7 @@ def ss_cert_gen():
                           "Certyfikat nie został utworzony.{}".format(red, reset))
     except Exception as err:
         print("Błąd: ", err)
+        input("Kontynuuj...")
 
 
 @clean_decor
