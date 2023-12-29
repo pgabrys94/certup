@@ -876,9 +876,11 @@ def refresh_all_statuses(outdated=False):
 def ss_cert_gen():
     try:
         print("""
-    UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
-    Należy nadać im przyjazną nazwę, np. moja_domena.cnf
-    """)
+UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
+Należy nadać im przyjazną nazwę, np. moja_domena.cnf
+""")
+        input("[enter] - kontynuuj...")
+        clean()
         if len(os.listdir(certcnfdir)) > 0:
             for file in os.listdir(certcnfdir):
                 skip = False
