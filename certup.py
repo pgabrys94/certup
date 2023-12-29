@@ -705,11 +705,15 @@ def target_hosts():
                     if len(changed_to.split(".")) < 4:
                         raise Exception("Niepoprawny format adresu IP.")
                     else:
+                        print("zmiana na:",changed_to)
+                        input("pause")
                         return changed_to
                 elif "Port" in val:
                     if not changed_to.isdigit() or int(changed_to) not in range(1, 65536):
                         raise Exception("Numer portu musi być liczbą z przedziału 1 - 65535")
                     else:
+                        print("zmiana na:", changed_to)
+                        input("pause")
                         return changed_to
                 elif "Komendy" in val:
                     commands = changed_to.split("#")
@@ -719,6 +723,8 @@ def target_hosts():
                             clean_commands.append(command.strip())
                     return clean_commands
                 else:
+                    print("zmiana na:", changed_to)
+                    input("pause")
                     return changed_to
 
             except Exception as err:
