@@ -792,7 +792,6 @@ def target_hosts():
                 host_status_fresh = False
                 data.save()
                 clean()
-                return
             else:
                 clean()
                 print(try_again)
@@ -832,6 +831,7 @@ def target_hosts():
         if choice == "c":
             clean()
             print(cancel)
+            time.sleep(1)
             return
         if choice == "s":
             salt_edit()
