@@ -925,7 +925,7 @@ def cert_into_ks():
     def proceed():
         try:
             i = 0
-            certsdir = os.path.join(certdir, f"{ksfile}_certs")
+            certsdir = os.path.join(certdir, "{}_certs".format(ksfile))
             for file in os.listdir(certsdir):
                 try:
                     if file.split(".")[1] == "crt":
