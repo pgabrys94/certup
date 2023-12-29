@@ -791,7 +791,7 @@ def target_hosts():
                 choosing_parameter = False
                 clean()
             elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 7):
-                value[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
+                values[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 print(host_key)
                 print(values)
                 input("pause")
