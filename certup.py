@@ -794,6 +794,9 @@ def target_hosts():
                     data.veil(host_key, 3)
                 if int(parameter_choice) - 1 == 4:
                     data.veil(host_key, 4)
+                print(host_key)
+                print(values)
+                input("pause2")
                 host_status_fresh = False
                 data.save()
                 clean()
