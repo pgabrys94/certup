@@ -895,8 +895,6 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                         if time_valid.isdigit():
                             break
                         elif time_valid == "":
-                            print("{}Pomijam {}...{}".format(blue, file, reset))
-                            time.sleep(1)
                             skip = True
                             break
                 if not skip:
