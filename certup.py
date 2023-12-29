@@ -885,7 +885,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
             for file in os.listdir(certcnfdir):
                 skip = False
                 filename = file.split(".")[0]
-                createfp = os.path.join(certdir, ksfile, filename)
+                createfp = os.path.join(certdir, f"{ksfile}_certs", filename)
                 while True:
                     if file.split(".")[0] == "domain":
                         skip = True
