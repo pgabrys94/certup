@@ -872,7 +872,6 @@ def refresh_all_statuses(outdated=False):
     return
 
 
-@clean_decor
 def ss_cert_gen():
     try:
         print("""
