@@ -857,6 +857,10 @@ def refresh_all_statuses(outdated=False):
     return
 
 
+def cert_gen():
+    pass
+
+
 @clean_decor
 def cert_into_ks():
     """
@@ -956,7 +960,8 @@ menu_full = {
     "Wyeksportuj i użyj lokalnego magazynu kluczy": share_ks,
     "Hosty docelowe": target_hosts,
     "Odśwież status połączenia": refresh_all_statuses,
-    "Zmień sól": salt_edit
+    "Zmień sól": salt_edit,
+    "Wygeneruj nowe certyfikaty": cert_gen
 }
 
 # Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
@@ -969,10 +974,11 @@ while running:
 
         if setup:
             menu.insert(0, list(menu_full)[0])
-            menu.insert(3, list(menu_full)[1])
-            menu.insert(4, list(menu_full)[2])
-            menu.insert(5, list(menu_full)[5])
-            menu.insert(6, list(menu_full)[7])
+            menu.insert(1, list(menu_full)[1])
+            menu.insert(2, list(menu_full)[8])
+            menu.insert(5, list(menu_full)[2])
+            menu.insert(6, list(menu_full)[5])
+            menu.insert(7, list(menu_full)[7])
             setup = False
     else:
         print("\n{}WYBIERZ MAGAZYN KLUCZY{}\n".format(red, reset))
