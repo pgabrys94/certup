@@ -880,7 +880,7 @@ def ss_cert_gen():
     """)
         for file in os.listdir(certcnfdir):
             skip = False
-            createfp = os.path.join(certdir, file)
+            createfp = os.path.join(certdir, ksfile, file)
             while True:
                 time_valid = input(f"Podaj liczbę dni ważności certyfikatu"
                                    f" '{file}'\nzatwierdź puste pole by pominąć ten plik: ")
