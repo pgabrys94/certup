@@ -883,6 +883,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
         clean()
         if len(os.listdir(certcnfdir)) > 0:
             for file in os.listdir(certcnfdir):
+                print(file)
                 skip = False
                 createfp = os.path.join(certdir, ksfile, file)
                 while True:
