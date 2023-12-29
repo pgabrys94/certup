@@ -924,6 +924,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                               "Certyfikat nie został utworzony.{}".format(red, reset))
                 else:
                     print("{}Pomijam {}...{}".format(blue, file, reset))
+                    time.sleep(1)
         else:
             print("Nie znaleziono plików .cnf niezbędnych do utworzenia certyfikatów i kluczy.")
             print("Upewnij się że pliki '<nazwa>.cnf' istnieją w katalogu './certs/domains_cnf'")
