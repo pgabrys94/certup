@@ -531,7 +531,7 @@ def check_structure():
 
 def jdk_present():
     """
-    Funkcja sprawdzająca obecność Java Development Kit w hoście źródłowym.
+    Funkcja sprawdzająca obecność Java Development Kit na hoście źródłowym.
     :return:
     """
     try:
@@ -544,9 +544,13 @@ def jdk_present():
 
 
 def openssl_present():
+    """
+    Funkcja sprawdzająca obecność openssl na hoście źródłowym.
+    """
     try:
-        subprocess.run(["openssl", "version"])
-        return True
+        result = subprocess.check_output(["openssl", "version"], stderr=subprocess.STDOUT, text=True)
+        if "library: openssl" in result.lower():
+            return True
     except Exception:
         return False
 
