@@ -137,8 +137,9 @@ class Remote:
         :param destpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
         :return:
         """
+        path = os.path.join(self.path, 'cacerts').replace("\\", "/")
         command = (f"keytool -importkeystore -deststorepass {destpwd} -cacerts -srckeystore"
-                   f" {os.path.join(self.path, 'cacerts').replace("\\", "/")} -srcstorepass {srcpwd} -noprompt")
+                   f" {path} -srcstorepass {srcpwd} -noprompt")
         if self.verbose:
             print("Importowanie magazynu kluczy...")
         try:
