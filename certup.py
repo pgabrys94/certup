@@ -257,6 +257,7 @@ def up_ks():
         target.disconnect()
         return
 
+    @clean_decor
     def up_single(host):
         """
         Funkcja aktualizacji pojedyńczego hosta.
