@@ -31,7 +31,7 @@ setup = False                                   # Flaga pierwszego wyboru pliku 
 error = ""                                      # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
 keystore_pwd = ""                               # Hasło magazynu kluczy.
 # Lista powtarzających się wartości w menu.
-uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy", "Ścieżka absolutna pliku PKCS"]
+uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy", "Ścieżka absolutna katalogu PKCS"]
 conn_status = {}                                # Przechowuje informację o statusie połączenia poszczególnych hostów.
 host_status_fresh = False                       # Flaga odświeżania statusu połączenia z hostami zdalnymi.
 
