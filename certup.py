@@ -760,7 +760,7 @@ def target_hosts():
                             clean_commands.append(command.strip())
                     return clean_commands
                 elif "PKCS" in val:
-                    path = changed_to.replace("\\", "/")
+                    path = ("/" if changed_to[:1] != "/" else "") + changed_to.replace("\\", "/")
                     return path
                 else:
                     return changed_to
