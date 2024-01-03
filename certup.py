@@ -952,10 +952,10 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                 if not skip:
                     print("Tworzenie plików dla {}".format(file))
                     time.sleep(1)
+                    path = os.path.join(certcnfdir, file).replace("\\", "/")
                     subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
                                     "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
-                                    "-out", f"{createfp}.crt", "-config", f"{os.path.join(certcnfdir, file)
-                                    .replace("\\", "/")}"])
+                                    "-out", f"{createfp}.crt", "-config", f"{path}"])
 
                     if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
                         print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
