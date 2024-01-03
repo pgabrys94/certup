@@ -2,7 +2,9 @@ CertUp
 -----------------------------------------------------------------------------------------------------------------------
 
 Program do obsługi certyfikatów SSL w magazynach Java KeyStore na wielu zdalnych hostach docelowych.
-Umożliwia odczyt i modyfikację magazynu kluczy JKS, głównym zamysłem jest modyfikacja magazynu cacerts.
+Umożliwia odczyt i modyfikację magazynu kluczy JKS, a jego głównym zamysłem jest modyfikacja magazynu cacerts.
+Dodatkowo, umożliwia transfer plików PKCS (.p12) oraz przeniesienie ich do określonego katalogu na hoście docelowym,
+a także zdalne wykonanie poleceń.
 Obsługa za pomocą interfejsu linii komend.
 
 Wymagania:
