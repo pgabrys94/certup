@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Informacje
 name = "CertUp"
-version = 1.22
+version = 1.23
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
@@ -26,10 +26,12 @@ certcnfdir = os.path.join(certdir, "domains_cnf")   # Ścieżka plików konfigur
 datadir = os.path.join(os.getcwd(), "configs")  # Ścieżka do plików konfiguracyjnych.
 datafile = None                                 # Nazwa pliku konfiguracyjnego - oparta o nazwę magazynu kluczy.
 datafilefp = ""                                 # Ścieżka absolutna do pliku konfiguracyjnego.
+pkcsfilefp = ""                                 # Ścieżka do pliku PKCS.
 setup = False                                   # Flaga pierwszego wyboru pliku konfiguracyjnego, wykorzystywana w menu.
 error = ""                                      # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
 keystore_pwd = ""                               # Hasło magazynu kluczy.
-uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy"]     # Lista powtarzających się wartości w menu.
+# Lista powtarzających się wartości w menu.
+uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy", "Ścieżka absolutna pliku PKCS"]
 conn_status = {}                                # Przechowuje informację o statusie połączenia poszczególnych hostów.
 host_status_fresh = False                       # Flaga odświeżania statusu połączenia z hostami zdalnymi.
 
@@ -51,10 +53,10 @@ class Remote:
         self.sudopwd = sudopwd
         self.commands = command_list
         self.terminal = paramiko.SSHClient()
-        self.path = os.path.join("/", "home", self.login, "certup") if self.login != "root"\
-            else os.path.join("/", "root", "certup")
-        self.backup_path = os.path.join(self.path, "backup")
+        self.path = os.path.join("/", "home", self.login, "certup").replace("\\", "/") if self.login != "root" \
+            else os.path.join("/", "root", "certup").replace("\\", "/")
         self.verbose = verbose
+        self.error = False
 
         self.iterator = 0
 
@@ -67,10 +69,10 @@ class Remote:
             self.terminal.set_missing_host_key_policy(paramiko.AutoAddPolicy)
             self.terminal.connect(self.ip, port=self.port, username=self.login, password=self.pwd)
             if self.verbose:
-                print("\n{}POŁĄCZONO z {}{}".format(green, self.hostname, reset))
+                print("\n{}POŁĄCZONO z: {}{}".format(green, reset, self.hostname))
         except Exception as err:
             if self.verbose:
-                print("{}BŁĄD POŁĄCZENIA z {}{}: {}".format(red, self.hostname, reset, err))
+                print("{}BŁĄD POŁĄCZENIA z: {}{}: {}".format(red, reset, self.hostname, err))
 
     def disconnect(self):
         """
@@ -79,7 +81,19 @@ class Remote:
         """
         self.terminal.close()
         if self.verbose:
-            print("{}ROZŁĄCZONO z {}{}".format(green, self.hostname, reset))
+            print("{}ROZŁĄCZONO z: {}{}".format(green, reset, self.hostname))
+            if self.error:
+                print("\n{}POJAWIŁY SIĘ BŁĘDY:{} Zweryfikuj poprawność całej operacji".format(yellow, reset))
+
+    def locate(self, path):
+        """
+        Lokalizowanie ścieżki. Wykorzystywane przy sprawdzaniu poprawności scieżki docelowej
+        pliku PKCS na hoście docelowym.
+        :param path: Ścieżka absolutna do katalogu.
+        :return: Boolean
+        """
+        with self.terminal.open_sftp() as sftp:
+            return sftp.stat(path)
 
     def go_sudo(self, command):
         """
@@ -108,7 +122,13 @@ class Remote:
                     sftp.mkdir(self.path)
                     print("{}Utworzono ścieżki.{}".format(green, reset))
                 except Exception as err:
-                    print("{}Błąd tworzenia struktury katalogów: {}".format(red, reset), err)
+                    print("{}Błąd, próbuję sudo...: {}".format(red, reset))
+                    try:
+                        self.go_sudo(f"mkdir {self.path}")
+                        print("{}Utworzono ścieżki.{}".format(green, reset))
+                    except Exception:
+                        self.error = True
+                        print("{}Błąd tworzenia struktury katalogów: {}".format(red, reset), err)
 
     def import_jks(self, srcpwd, destpwd):
         """
@@ -118,7 +138,7 @@ class Remote:
         :return:
         """
         command = (f"keytool -importkeystore -deststorepass {destpwd} -cacerts -srckeystore"
-                   f" {os.path.join(self.path, 'cacerts')} -srcstorepass {srcpwd} -noprompt")
+                   f" {os.path.join(self.path, 'cacerts').replace("\\", "/")} -srcstorepass {srcpwd} -noprompt")
         if self.verbose:
             print("Importowanie magazynu kluczy...")
         try:
@@ -127,8 +147,9 @@ class Remote:
             else:
                 self.terminal.exec_command(command)
             if self.verbose:
-                print("{}Zaimportowano magazyn kluczy.{}".format(green, reset))
+                print("{}Wykonano komendę importu.{}".format(green, reset))
         except Exception as err:
+            self.error = True
             if self.verbose:
                 print("{}Błąd importowania magazynu kluczy: {}".format(red, reset), err)
 
@@ -151,21 +172,24 @@ class Remote:
                     if self.verbose:
                         print("{}Błąd komendy: {}{}: {}".format(red, reset, command, err))
 
-    def upload(self, file):
+    def upload(self, file, filename="cacerts"):
         """
         Metoda odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego.
         :param file: Pełna ścieżka do pliku magazynu kluczy.
+        :param filename: domyślnie="cacerts" -> Nazwa pliku docelowego na hoście zdalnym.
         :return:
         """
         try:
             if self.verbose:
                 print("Wysyłanie...")
             sftp = self.terminal.open_sftp()
-            sftp.put(file, os.path.join(self.path, "cacerts"))
+            sftp.put(file, os.path.join(self.path, filename).replace("\\", "/"))
             sftp.close()
             if self.verbose:
-                print("{}Wysłano: {}:{}{}".format(green, self.ip, os.path.join(self.path, "cacerts"), reset))
+                print("{}Wysłano: {}:{}{}".format(green, self.ip, os.path.join(self.path, filename)
+                                                  .replace("\\", "/"), reset))
         except Exception as err:
+            self.error = True
             if self.verbose:
                 print("{}Błąd wysyłania{}: {}".format(red, reset, err))
 
@@ -204,13 +228,28 @@ def up_ks():
     """
     Funkcja zdalnej aktualizacji hostów docelowych.
     """
-    def execute(target):
+    def execute(target, host):
         """
         Wywołanie funkcji na wyznaczonym hoście.
         """
         target.connect()
         target.create_tree()
         target.upload(ksfilefp)
+        try:
+            if os.path.exists(pkcsfilefp) and data()[host][6] != "":
+                if target.locate(data()[host][6]):
+                    rfname = f"{ksfile}.p12"
+                    rfrp = os.path.join(target.path, rfname).replace("\\", "/")
+                    target.upload(pkcsfilefp, rfname)
+                    print("Przenoszenie pliku PKCS...")
+                    command = f"mv -f {rfrp} {os.path.join(data()[host][6], rfname).replace("\\", "/")}"
+                    target.go_sudo(command)
+                    print("{}Sukces relokacji PKCS.{}".format(green, reset))
+                else:
+                    print("{}Docelowa lokalizacja dla pliku PKCS nie istnieje, sprawdź konfigurację hosta.\n"
+                          "Plik nie został przeniesiony.{}".format(yellow, reset))
+        except Exception as err:
+            print(err)
         target.import_jks(keystore_pwd, keystore_pwd)
         target.run()
         target.disconnect()
@@ -223,7 +262,7 @@ def up_ks():
         target = Remote(host, data()[host][0], data()[host][1], data()[host][2],
                         data.unveil(data()[host][3]), data.unveil(data()[host][4]), data()[host][5], True)
 
-        execute(target)
+        execute(target, host)
         input("\n[enter] - kontynuuuj...")
         return
 
@@ -238,7 +277,7 @@ def up_ks():
                     target = Remote(key, value[0], value[1], value[2], data.unveil(value[3]),
                                     data.unveil(value[4]), value[5], True)
 
-                    execute(target)
+                    execute(target, key)
 
             input("\n[enter] - kontynuuuj...")
             return
@@ -332,7 +371,7 @@ def share_ks():
                 print(line)
                 if "java.home" in line:
                     request = line.split("=")[1].strip()
-                    java_cert_path = os.path.join(request, default_dir_structure)
+                    java_cert_path = os.path.join(request, default_dir_structure).replace("\\", "/")
                     return java_cert_path
             return False
         except Exception as er:
@@ -359,9 +398,9 @@ def share_ks():
     keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
     keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
 
-    ksfilefp = os.path.join(ksdir, ksfile)
+    ksfilefp = os.path.join(ksdir, ksfile).replace("\\", "/")
     datafile = ksfile + ".json"
-    datafilefp = os.path.join(datadir, datafile)
+    datafilefp = os.path.join(datadir, datafile).replace("\\", "/")
     data.file = datafilefp
     try:
         cacfp = locate_java_ks()
@@ -599,6 +638,7 @@ def select_keystore():
     global setup
     global keystore_pwd
     global host_status_fresh
+    global pkcsfilefp
     choosing = True
     files = os.listdir(ksdir)
 
@@ -624,10 +664,11 @@ def select_keystore():
                 else:
                     setup = False
                 ksfile = files[int(choice) - 1]
-                ksfilefp = os.path.join(ksdir, ksfile)
+                ksfilefp = os.path.join(ksdir, ksfile).replace("\\", "/")
                 datafile = ksfile + ".json"
-                datafilefp = os.path.join(datadir, datafile)
+                datafilefp = os.path.join(datadir, datafile).replace("\\", "/")
                 data.file = datafilefp
+                pkcsfilefp = os.path.join(certdir, f"{ksfile}_certs", f"{ksfile}.p12").replace("\\", "/")
                 choosing = False
                 keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
                 keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
@@ -649,8 +690,8 @@ def get_config():
     """
     if not os.path.exists(datafilefp):
         data.save()
-    if not os.path.exists(os.path.join(certdir, f"{ksfile}_certs")):
-        os.makedirs(os.path.join(certdir, f"{ksfile}_certs"), exist_ok=True)
+    if not os.path.exists(os.path.join(certdir, f"{ksfile}_certs").replace("\\", "/")):
+        os.makedirs(os.path.join(certdir, f"{ksfile}_certs").replace("\\", "/"), exist_ok=True)
     try:
         data.dump()
         data.load()
@@ -718,6 +759,9 @@ def target_hosts():
                         if len(command) > 0:
                             clean_commands.append(command.strip())
                     return clean_commands
+                elif "PKCS" in val:
+                    path = changed_to.replace("\\", "/")
+                    return path
                 else:
                     return changed_to
 
@@ -739,13 +783,15 @@ def target_hosts():
             f"{uni_val[2]}: ": None,
             f"{uni_val[3]}: ": None,
             f"{uni_val[4]}: ": None,
-            f"{uni_val[5]} do wykonania na hoście\n(każdą komendę oddziel znakiem #): ": []
+            f"{uni_val[5]} do wykonania na hoście\n(każdą komendę oddziel znakiem #): ": [],
+            f"{uni_val[6]}: ": None
         }
         vrsl = list(vrs)
 
         for var in vrsl:
             vrs[var] = new_value(var.split(":")[0])
-        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]], vrs[vrsl[4]], vrs[vrsl[5]], vrs[vrsl[6]]]}
+        values = {vrs[vrsl[0]]: [vrs[vrsl[1]], vrs[vrsl[2]], vrs[vrsl[3]],
+                                 vrs[vrsl[4]], vrs[vrsl[5]], vrs[vrsl[6]], vrs[vrsl[7]]]}
         data.create(vrs[vrsl[0]], values[vrs[vrsl[0]]])
         data.veil(vrs[vrsl[0]], 3)
         data.veil(vrs[vrsl[0]], 4)
@@ -772,17 +818,19 @@ def target_hosts():
             print("{}: {}".format(uni_val[2], values[2]))
             print(separator)
             print("{}: {}".format(uni_val[5], values[5]))
+            print("{}: {}".format(uni_val[6], values[6]))
             print(separator)
 
             for opt in uni_val:
-                print("[{}] - {}{}".format(uni_val.index(opt) + 1, "Zmień ", opt if opt == uni_val[0] else opt.lower()))
+                print("[{}] - {}{}".format(uni_val.index(opt) + 1, "Zmień ",
+                                           opt if opt == uni_val[0] or opt == uni_val[6]else opt.lower())
+                      .replace("Ścieżka absolutna", "ścieżkę absolutną"))
             print("\n[c] - powrót\n")
             parameter_choice = input("Wybierz opcję i potwierdź: ")
-
             if parameter_choice == "c":
                 choosing_parameter = False
                 clean()
-            elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 7):
+            elif parameter_choice.isdigit() and int(parameter_choice) in range(1, 8):
                 values[int(parameter_choice) - 1] = new_value(uni_val[int(parameter_choice) - 1])
                 data.create(host_key, values)
                 if int(parameter_choice) - 1 == 3:
@@ -886,7 +934,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                 skip = False
                 filename = file.split(".")[0]
                 time_valid = 0
-                createfp = os.path.join(certdir, f"{ksfile}_certs", filename)
+                createfp = os.path.join(certdir, f"{ksfile}_certs", filename).replace("\\", "/")
                 while True:
                     if file.split(".")[0] == "domain":
                         skip = True
@@ -904,7 +952,8 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
                     time.sleep(1)
                     subprocess.run(["openssl", "req", "-new", "-x509", "-newkey", "rsa:2048", "-sha256",
                                     "-nodes", "-keyout", f"{createfp}.key", "-days", f"{time_valid}",
-                                    "-out", f"{createfp}.crt", "-config", f"{os.path.join(certcnfdir, file)}"])
+                                    "-out", f"{createfp}.crt", "-config", f"{os.path.join(certcnfdir, file)
+                                    .replace("\\", "/")}"])
 
                     if os.path.exists(f"{createfp}.crt") and os.path.exists(f"{createfp}.key"):
                         print("{}Pomyślnie utworzono klucz i certyfikat.{}".format(green, reset))
@@ -946,13 +995,13 @@ def cert_into_ks():
     def proceed():
         try:
             i = 0
-            certsdir = os.path.join(certdir, "{}_certs".format(ksfile))
+            certsdir = os.path.join(certdir, "{}_certs".format(ksfile)).replace("\\", "/")
             for file in os.listdir(certsdir):
                 try:
                     if file.split(".")[1] == "crt":
                         keystore = jks.KeyStore.load(ksfilefp, keystore_pwd)
                         alias = file.split(".")[0]
-                        with open(os.path.join(certsdir, file), 'rb') as crt_file:
+                        with open(os.path.join(certsdir, file).replace("\\", "/"), 'rb') as crt_file:
                             crt_data = crt_file.read()
                         cert = x509.load_pem_x509_certificate(crt_data, default_backend())
 
