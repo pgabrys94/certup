@@ -243,7 +243,8 @@ def up_ks():
                     rfrp = os.path.join(target.path, rfname).replace("\\", "/")
                     target.upload(pkcsfilefp, rfname)
                     print("Przenoszenie pliku PKCS...")
-                    command = f"mv -f {rfrp} {os.path.join(data()[host][6], rfname).replace("\\", "/")}"
+                    path = os.path.join(data()[host][6], rfname).replace("\\", "/")
+                    command = f"mv -f {rfrp} {path}"
                     target.go_sudo(command)
                     print("{}Sukces relokacji PKCS.{}".format(green, reset))
                 else:
