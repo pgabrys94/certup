@@ -257,7 +257,6 @@ def up_ks():
         target.disconnect()
         return
 
-    @clean_decor
     def up_single(host):
         """
         Funkcja aktualizacji pojedyńczego hosta.
@@ -267,6 +266,7 @@ def up_ks():
 
         execute(target, host)
         input("\n[enter] - kontynuuuj...")
+        clean()
         return
 
     @clean_decor
