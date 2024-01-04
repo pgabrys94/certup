@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Informacje
 name = "CertUp"
-version = 1.24
+version = 1.25
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
@@ -26,7 +26,7 @@ certcnfdir = os.path.join(certdir, "domains_cnf")   # Ścieżka plików konfigur
 datadir = os.path.join(os.getcwd(), "configs")  # Ścieżka do plików konfiguracyjnych.
 datafile = None                                 # Nazwa pliku konfiguracyjnego - oparta o nazwę magazynu kluczy.
 datafilefp = ""                                 # Ścieżka absolutna do pliku konfiguracyjnego.
-pkcsfilefp = ""                                 # Ścieżka do pliku PKCS.
+pkcsfiles = {}                                  # Ścieżki do plików PKCS przypisanych do poszczególnych hostów.
 setup = False                                   # Flaga pierwszego wyboru pliku konfiguracyjnego, wykorzystywana w menu.
 error = ""                                      # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
 keystore_pwd = ""                               # Hasło magazynu kluczy.
@@ -87,7 +87,7 @@ class Remote:
 
     def locate(self, path):
         """
-        Lokalizowanie ścieżki. Wykorzystywane przy sprawdzaniu poprawności scieżki docelowej
+        Lokalizowanie ścieżki zdalnej. Wykorzystywane przy sprawdzaniu poprawności scieżki docelowej
         pliku PKCS na hoście docelowym.
         :param path: Ścieżka absolutna do katalogu.
         :return: Boolean
@@ -237,19 +237,20 @@ def up_ks():
         target.create_tree()
         target.upload(ksfilefp)
         try:
-            if os.path.exists(pkcsfilefp) and data()[host][6] != "":
-                if target.locate(data()[host][6]):
-                    rfname = f"{ksfile}.p12"
-                    rfrp = os.path.join(target.path, rfname).replace("\\", "/")
-                    target.upload(pkcsfilefp, rfname)
-                    print("Przenoszenie pliku PKCS...")
-                    path = os.path.join(data()[host][6], rfname).replace("\\", "/")
-                    command = f"mv -f {rfrp} {path}"
-                    target.go_sudo(command)
-                    print("{}Sukces relokacji PKCS.{}".format(green, reset))
-                else:
-                    print("{}Docelowa lokalizacja dla pliku PKCS nie istnieje, sprawdź konfigurację hosta.\n"
-                          "Plik nie został przeniesiony.{}".format(yellow, reset))
+            if host in list(pkcsfiles) and len(pkcsfiles[host]) > 0:
+                if os.path.exists(pkcsfiles[host]) and data()[host][6] != "":
+                    if target.locate(data()[host][6]):
+                        rfname = f"{host}.p12"
+                        rfrp = os.path.join(target.path, rfname).replace("\\", "/")
+                        target.upload(pkcsfiles[host], rfname)
+                        print("Przenoszenie pliku PKCS...")
+                        path = os.path.join(data()[host][6], rfname).replace("\\", "/")
+                        command = f"mv -f {rfrp} {path}"
+                        target.go_sudo(command)
+                        print("{}Sukces relokacji PKCS.{}".format(green, reset))
+                    else:
+                        print("{}Docelowa lokalizacja dla pliku PKCS nie istnieje, sprawdź konfigurację hosta.\n"
+                              "Plik nie został przeniesiony.{}".format(yellow, reset))
         except Exception as err:
             print(err)
         target.import_jks(keystore_pwd, keystore_pwd)
@@ -627,7 +628,6 @@ def connection_ok(host):
         conn_status[host] = False
         return
 
-
 @clean_decor
 def select_keystore():
     """
@@ -642,7 +642,6 @@ def select_keystore():
     global setup
     global keystore_pwd
     global host_status_fresh
-    global pkcsfilefp
     choosing = True
     files = os.listdir(ksdir)
 
@@ -672,7 +671,6 @@ def select_keystore():
                 datafile = ksfile + ".json"
                 datafilefp = os.path.join(datadir, datafile).replace("\\", "/")
                 data.file = datafilefp
-                pkcsfilefp = os.path.join(certdir, f"{ksfile}_certs", f"{ksfile}.p12").replace("\\", "/")
                 choosing = False
                 keystore_pwd = input("Wprowadź hasło do magazynu kluczy (domyślnie: changeit): ")
                 keystore_pwd = "changeit" if keystore_pwd == "" else keystore_pwd
@@ -692,6 +690,18 @@ def get_config():
      Tworzy także dodatkowe niezbędne struktury katalogów, jeżeli ich brak..
     :return:
     """
+    def get_pkcs_names():
+        """
+        Funkcja definiująca ścieżki do plików PKCS celem ich późniejszego przesłania na host docelowy.
+        """
+        global pkcsfiles
+        for hostname in list(data()):
+            try:
+                pkcsfilefp = os.path.join(certdir, f"{ksfile}_certs", f"{hostname}.p12").replace("\\", "/")
+                pkcsfiles[hostname] = pkcsfilefp
+            except Exception:
+                pkcsfiles[hostname] = ""
+
     json_structure_updated = False  # Flaga wskazująca na dopisanie brakujących miejsc na parametry do .json
     if not os.path.exists(datafilefp):
         data.save()
@@ -700,6 +710,7 @@ def get_config():
     try:
         data.dump()
         data.load()
+        get_pkcs_names()
         # Sprawdzanie i aktualizacja struktury już istniejącego pliku konfiguracyjnego.
         for key, val in data().items():
             current_values = val
