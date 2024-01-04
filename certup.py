@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Informacje
 name = "CertUp"
-version = 1.23
+version = 1.24
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
@@ -565,7 +565,8 @@ def check_structure():
               "Umieść plik magazynu kluczy w folderze 'keystores' i uruchom ponownie program.")
         print("Jeżeli masz zamiar zaimportować certyfikaty, umieść je w katalogu 'certs/<nazwa magazynu kluczy>_certs'"
               " przed uruchomieniem programu.")
-        print("Jeżeli chcesz wygenerować certyfikaty self-signed, umieść pliki '.cnf' w katalogu 'certs/domains_cnf'.")
+        print("Jeżeli chcesz wygenerować certyfikaty self-signed, umieść pliki '<alias>.cnf' "
+              "w katalogu 'certs/domains_cnf'.")
         input("\n[enter] - zamknij")
         return True
 
@@ -691,6 +692,7 @@ def get_config():
      Tworzy także dodatkowe niezbędne struktury katalogów, jeżeli ich brak..
     :return:
     """
+    json_structure_updated = False  # Flaga wskazująca na dopisanie brakujących miejsc na parametry do .json
     if not os.path.exists(datafilefp):
         data.save()
     if not os.path.exists(os.path.join(certdir, f"{ksfile}_certs").replace("\\", "/")):
@@ -698,6 +700,22 @@ def get_config():
     try:
         data.dump()
         data.load()
+        # Sprawdzanie i aktualizacja struktury już istniejącego pliku konfiguracyjnego.
+        for key, val in data().items():
+            current_values = val
+            while len(current_values) < len(uni_val):
+                json_structure_updated = True
+                current_values.append("")
+                if len(current_values) == len(uni_val):
+                    data.create(key, current_values)
+                    data.save()
+                    data.dump()
+                    data.load()
+        if json_structure_updated:
+            print('{}Plik konfiguracyjny został zaktualizowany.\n'
+                  'Sprawdź konfigurację hostów i uzupełnij brakujące parametry.{}'.format(yellow, reset))
+            input("\n[enter] - kontynuuj...")
+            clean()
     except Exception as err:
         print(err)
         return False
