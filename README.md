@@ -24,5 +24,6 @@ Funkcjonalności:
     -wyświetlanie aliasów, dat utworzenia, treści certyfikatów,
     -importowanie certyfikatów do keystore,
     -przesyłanie magazynów JKS i PKCS do hostów zdalnych za pomocą SSH,
+    -weryfikacja przesłanych plików poprzez porównanie hashów MD5,
     -przechowywanie konfiguracji hostów zdalnych przypisanych do danego magazynu kluczy,
     -bezpieczne przechowywanie haseł do hostów zdalnych (szyfrowanie SHA-256, przypisanie pliku konfiguracyjnego do hosta źródłowego, możliwość zastosowania soli).
