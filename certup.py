@@ -7,6 +7,7 @@ from conson import Conson
 import jks
 import base64
 import textwrap
+import hashlib
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
@@ -14,7 +15,7 @@ from cryptography.hazmat.primitives import serialization
 
 # Informacje
 name = "CertUp"
-version = 1.25
+version = 1.26
 author = "PG/DASiUS"    # https://github.com/pgabrys94
 
 # Zmienne globalne:
@@ -175,20 +176,40 @@ class Remote:
 
     def upload(self, file, filename="cacerts"):
         """
-        Metoda odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego.
+        Metoda odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego
+        oraz weryfikację plików za pomocą funkcji MD5.
         :param file: Pełna ścieżka do pliku magazynu kluczy.
         :param filename: domyślnie="cacerts" -> Nazwa pliku docelowego na hoście zdalnym.
-        :return:
         """
         try:
             if self.verbose:
                 print("Wysyłanie...")
+
+            #   Sprawdzanie hash MD5 pliku źródłowego:
+            md5source = hashlib.md5()
+            with open(file, "rb") as sf:
+                while chunk := sf.read(8192):
+                    md5source.update(chunk)
             sftp = self.terminal.open_sftp()
             sftp.put(file, os.path.join(self.path, filename).replace("\\", "/"))
+
+            #   Sprawdzanie hash MD5 pliku docelowego (przesłanego):
+            md5target = hashlib.md5()
+            with sftp.file(os.path.join(self.path, filename).replace("\\", "/"), "rb") as targetfile:
+                while chunk := targetfile.read(8192):
+                    md5target.update(chunk)
             sftp.close()
+
             if self.verbose:
-                print("{}Wysłano: {}:{}{}".format(green, self.ip, os.path.join(self.path, filename)
-                                                  .replace("\\", "/"), reset))
+                print("{}Wysłano: {}:{}{}".format(green, reset, self.ip,
+                                                  os.path.join(self.path, filename).replace("\\", "/")))
+
+            #   Porównanie wartości hash MD5 obu plików, w przypadku braku zgodności cała operacja zostanie przerwana.
+            if md5source.hexdigest() != md5target.hexdigest():
+                raise Exception("{}Błąd weryfikacji MD5{}".format(red, reset))
+            else:
+                print("{}{} MD5 OK{}".format(green, filename, reset))
+
         except Exception as err:
             self.error = True
             if self.verbose:
@@ -235,14 +256,18 @@ def up_ks():
         """
         target.connect()
         target.create_tree()
-        target.upload(ksfilefp)
         try:
+            target.upload(ksfilefp)
+            if target.error:    # Przerywa wykonywanie operacji w razie wystąpienia błędu, np. niezgodności hashów MD5.
+                raise Exception("{}Błąd krytyczny, operacja przerwana{}".format(red, reset))
             if host in list(pkcsfiles) and len(pkcsfiles[host]) > 0:
                 if os.path.exists(pkcsfiles[host]) and data()[host][6] != "":
                     if target.locate(data()[host][6]):
                         rfname = f"{host}.p12"
                         rfrp = os.path.join(target.path, rfname).replace("\\", "/")
                         target.upload(pkcsfiles[host], rfname)
+                        if target.error:
+                            raise Exception("{}Błąd krytyczny, operacja przerwana{}".format(red, reset))
                         print("Przenoszenie pliku PKCS...")
                         path = os.path.join(data()[host][6], rfname).replace("\\", "/")
                         command = f"mv -f {rfrp} {path}"
@@ -251,10 +276,13 @@ def up_ks():
                     else:
                         print("{}Docelowa lokalizacja dla pliku PKCS nie istnieje, sprawdź konfigurację hosta.\n"
                               "Plik nie został przeniesiony.{}".format(yellow, reset))
+
+            target.import_jks(keystore_pwd, keystore_pwd)
+            target.run()
+        except FileNotFoundError:
+            pass
         except Exception as err:
             print(err)
-        target.import_jks(keystore_pwd, keystore_pwd)
-        target.run()
         target.disconnect()
         return
 
