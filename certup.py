@@ -628,6 +628,7 @@ def connection_ok(host):
         conn_status[host] = False
         return
 
+
 @clean_decor
 def select_keystore():
     """
