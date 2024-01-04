@@ -215,6 +215,9 @@ class Remote:
             if self.verbose:
                 print("{}Błąd wysyłania{}: {}".format(red, reset, err))
 
+        finally:
+            self.terminal.close()
+
 
 def clean(ex=False):
     """
