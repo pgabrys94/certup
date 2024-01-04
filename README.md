@@ -17,6 +17,7 @@ Modyfikacja na hostach zdalnych odbywa się natywnie poprzez wykonywanie komend 
 Wykorzystuje moduł conson do bezpiecznego przechowywania konfiguracji w plikach json i paramiko do nawiązywania połączeń.
 
 Funkcjonalności:
+
     -eksport istniejącego na hoście źródłowym magazynu kluczy JKS do programu (wymaga JDK),
     -modyfikacja magazynu kluczy JKS,
     -generowanie certyfikatów SSL self-signed (klucz, certyfikat, PKCS12) (wymaga openssl),
