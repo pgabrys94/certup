@@ -1,0 +1,35 @@
+[req]
+
+default_bits = 2048
+
+prompt = no
+
+default_md = sha256
+
+x509_extensions = v3_req
+
+distinguished_name = dn
+
+[dn]
+
+C = PL
+
+ST = test_state
+
+L = test_city
+
+O = test_organization
+
+emailAddress = us@local
+
+CN = test_name
+
+[v3_req]
+
+subjectAltName = @alt_names
+
+[alt_names]
+
+DNS.1 = test_name
+
+DNS.2 = test_name.test_organization.com
