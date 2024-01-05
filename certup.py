@@ -12,29 +12,28 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
-
 # Informacje
 name = "CertUp"
-version = 1.26
-author = "PG/DASiUS"    # https://github.com/pgabrys94
+version = 1.27
+author = "PG/DASiUS"  # https://github.com/pgabrys94
 
 # Zmienne globalne:
 ksdir = os.path.join(os.getcwd(), "keystores")  # Ścieżka do katalogu magazynów kluczy.
-ksfile = ""                                     # Nazwa wybranego magazynu kluczy, na którym operujemy.
-ksfilefp = ""                                   # Ścieżka absolutna do wybranego magazynu kluczy.
-certdir = os.path.join(os.getcwd(), "certs")    # Ścieżka do katalogu certyfikatów.
-certcnfdir = os.path.join(certdir, "domains_cnf")   # Ścieżka plików konfiguracyjnych dla generatora certyfikatów.
+ksfile = ""  # Nazwa wybranego magazynu kluczy, na którym operujemy.
+ksfilefp = ""  # Ścieżka absolutna do wybranego magazynu kluczy.
+certdir = os.path.join(os.getcwd(), "certs")  # Ścieżka do katalogu certyfikatów.
+certcnfdir = os.path.join(certdir, "domains_cnf")  # Ścieżka plików konfiguracyjnych dla generatora certyfikatów.
 datadir = os.path.join(os.getcwd(), "configs")  # Ścieżka do plików konfiguracyjnych.
-datafile = None                                 # Nazwa pliku konfiguracyjnego - oparta o nazwę magazynu kluczy.
-datafilefp = ""                                 # Ścieżka absolutna do pliku konfiguracyjnego.
-pkcsfiles = {}                                  # Ścieżki do plików PKCS przypisanych do poszczególnych hostów.
-setup = False                                   # Flaga pierwszego wyboru pliku konfiguracyjnego, wykorzystywana w menu.
-error = ""                                      # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
-keystore_pwd = ""                               # Hasło magazynu kluczy.
+datafile = None  # Nazwa pliku konfiguracyjnego - oparta o nazwę magazynu kluczy.
+datafilefp = ""  # Ścieżka absolutna do pliku konfiguracyjnego.
+pkcsfiles = {}  # Ścieżki do plików PKCS przypisanych do poszczególnych hostów.
+setup = False  # Flaga pierwszego wyboru pliku konfiguracyjnego, wykorzystywana w menu.
+error = ""  # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
+keystore_pwd = ""  # Hasło magazynu kluczy.
 # Lista powtarzających się wartości w menu.
 uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy", "Ścieżka absolutna katalogu PKCS"]
-conn_status = {}                                # Przechowuje informację o statusie połączenia poszczególnych hostów.
-host_status_fresh = False                       # Flaga odświeżania statusu połączenia z hostami zdalnymi.
+conn_status = {}  # Przechowuje informację o statusie połączenia poszczególnych hostów.
+host_status_fresh = False  # Flaga odświeżania statusu połączenia z hostami zdalnymi.
 
 # Utworzenie instancji klasy parametrów.
 data = Conson()
@@ -45,6 +44,7 @@ class Remote:
     Klasa tworząca obiekty do manipulacji zdalnym hostem. Atrybutami instancji takiej klasy są dane zawarte
     w słowniku parametrów instancji conson.
     """
+
     def __init__(self, hostname, ip, port, login, pwd, sudopwd, command_list, verbose=False):
         self.hostname = hostname
         self.ip = ip
@@ -242,9 +242,11 @@ def clean_decor(func):
     :param func: Funkcja
     :return:
     """
+
     def f(*args, **kwargs):
         clean()
         return func(*args, **kwargs)
+
     return f
 
 
@@ -253,6 +255,7 @@ def up_ks():
     """
     Funkcja zdalnej aktualizacji hostów docelowych.
     """
+
     def execute(target, host):
         """
         Wywołanie funkcji na wyznaczonym hoście.
@@ -261,7 +264,7 @@ def up_ks():
         target.create_tree()
         try:
             target.upload(ksfilefp)
-            if target.error:    # Przerywa wykonywanie operacji w razie wystąpienia błędu, np. niezgodności hashów MD5.
+            if target.error:  # Przerywa wykonywanie operacji w razie wystąpienia błędu, np. niezgodności hashów MD5.
                 raise Exception("{}Błąd krytyczny, operacja przerwana{}".format(red, reset))
             if host in list(pkcsfiles) and len(pkcsfiles[host]) > 0:
                 if os.path.exists(pkcsfiles[host]) and data()[host][6] != "":
@@ -483,6 +486,7 @@ def ls_ks():
         Wyświetl klucz certyfikatu i datę jego utworzenia.
         :return:
         """
+
         def decode_date(code):
             """
             Odczytywanie daty utworzenia certyfikatu.
@@ -500,7 +504,7 @@ def ls_ks():
         try:
             found = {}
             for alias, c in keystore.certs.items():
-                if alias_inp in alias:
+                if alias_inp in alias[:len(alias_inp)]:
                     found[alias] = c
             if len(list(found)) != 0:
                 for alias, c in found.items():
@@ -522,24 +526,45 @@ def ls_ks():
     @clean_decor
     def delete_cert(keystore):
         """
-        Funkcja usuwająca certyfikat z magazynu kluczy.
+        Funkcja usuwająca certyfikaty z magazynu kluczy.
         """
-        alias_inp = input("Podaj nazwę certyfikatu ([enter] - powrót): ")
+        alias_inp = input("Podaj nazwy certyfikatów oddzielone spacją ([enter] - powrót): ")
         try:
-            if alias_inp in keystore.entries:
-                del java_keystore.entries[alias_inp]
 
-                keystore.save(ksfilefp, keystore_pwd)
-
-                print(f"Usunięto certyfikat '{alias_inp}' z magazynu kluczy '{ksfile}'.")
-                time.sleep(2)
-                clean()
-            elif alias_inp.strip() == "":
-                print(cancel)
+            found = []
+            if len(alias_inp.split(" ")) == 1:
+                for alias in list(keystore.certs):
+                    if alias_inp in alias[:len(alias_inp)]:
+                        found.append(alias)
             else:
-                print(f"Nie znaleziono certyfikatu '{alias_inp}' w magazynie kluczy '{ksfile}'.")
-                time.sleep(2)
+                for inp in alias_inp.split(" "):
+                    for alias in list(keystore.certs):
+                        if inp in alias[:len(alias_inp)]:
+                            found.append(alias)
+
+            if alias_inp.strip() == "":
+                print(cancel)
                 clean()
+                return
+            else:
+                for found_inp in found:
+                    if found_inp in keystore.entries:
+                        print("\nZNALEZIONO: {}".format(found_inp))
+                        uin = input("Usunąć? [t/N]: ")
+                        confirm = False if uin.lower() != "t" else True
+
+                        if confirm:
+                            del java_keystore.entries[found_inp]
+
+                            keystore.save(ksfilefp, keystore_pwd)
+
+                            print(f"Usunięto certyfikat '{found_inp}' z magazynu kluczy '{ksfile}'.")
+                            time.sleep(2)
+                            clean()
+                    else:
+                        print(f"Nie znaleziono certyfikatu '{found_inp}' w magazynie kluczy '{ksfile}'.")
+                        time.sleep(2)
+                        clean()
         except Exception as er:
             print("{}Błąd:{} {}".format(red, reset, er))
             input("Kontynuuj...")
@@ -722,6 +747,7 @@ def get_config():
      Tworzy także dodatkowe niezbędne struktury katalogów, jeżeli ich brak..
     :return:
     """
+
     def get_pkcs_names():
         """
         Funkcja definiująca ścieżki do plików PKCS celem ich późniejszego przesłania na host docelowy.
@@ -887,7 +913,7 @@ def target_hosts():
 
             for opt in uni_val:
                 print("[{}] - {}{}".format(uni_val.index(opt) + 1, "Zmień ",
-                                           opt if opt == uni_val[0] or opt == uni_val[6]else opt.lower())
+                                           opt if opt == uni_val[0] or opt == uni_val[6] else opt.lower())
                       .replace("Ścieżka absolutna", "ścieżkę absolutną"))
             print("\n[c] - powrót\n")
             parameter_choice = input("Wybierz opcję i potwierdź: ")
@@ -947,8 +973,10 @@ def target_hosts():
             return
         if choice == "s":
             salt_edit()
+            clean()
         elif choice == "a":
             add_host()
+            clean()
         elif "d" in choice:
             try:
                 number = ""
@@ -1112,7 +1140,7 @@ Kontynuować?
     print(warn)
     choosing = True
     while choosing:
-        choice = input("[t/n] - domyślnie [n]: ")
+        choice = input("[t/N]: ")
 
         if choice == "" or choice.lower() == "n":
             print(cancel)
@@ -1136,9 +1164,8 @@ yellow = "\033[93m"
 reset = "\033[0m"
 welcome = "{} v{} by {}".format(name, version, author)
 separator = "-" * len(welcome)
-cancel = "\n{}POWRÓT...{}".format(blue,  reset)
+cancel = "\n{}POWRÓT...{}".format(blue, reset)
 try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
-
 
 # Menu główne
 if check_structure():
@@ -1181,8 +1208,7 @@ while running:
             if list(menu_full)[4] not in menu:
                 menu.insert(2, list(menu_full)[4])
 
-
-# Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
+    # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
     if len(list(data())) > 0:
         refresh_all_statuses()
         print("\nSTATUS POŁĄCZENIA:\n")
