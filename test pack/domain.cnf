@@ -18,7 +18,7 @@ ST = test_state
 
 L = test_city
 
-O = test_organisation
+O = test_organization
 
 emailAddress = us@local
 
@@ -32,4 +32,4 @@ subjectAltName = @alt_names
 
 DNS.1 = test_name
 
-DNS.2 = test_name.test_organisation.com
+DNS.2 = test_name.test_organization.com
