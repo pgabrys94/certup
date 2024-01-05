@@ -81,11 +81,11 @@ Pozwala na zmianę soli kryptograficznej wykorzystywanej w szyfrowaniu haseł w 
 UWAGA: zmiana soli po zdefiniowaniu hostów uniemożliwi połączenie z nimi. Jeżeli chcemy wzmocnić zabezpieczenie naszych danych 
 w plikach konfiguracyjnych, należy to zrobić przed definiowaniem hostów przypisanych do danego magazynu kluczy.
 
-    [r] - Odśwież status połączenia
+    Odśwież status połączenia
 
 JEŻELI MAMY ZDEFINIOWANY CO NAJMNIEJ 1 HOST DOCELOWY: ponownie odpyta o dostępność każdego zdefiniowanego hosta docelowego.
 
-    [q] - Zakończ
+    Zakończ
 
 Kończy pracę programu.
 
