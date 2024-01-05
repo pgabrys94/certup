@@ -43,31 +43,51 @@ Jeżeli nie będzie w stanie zlokalizować magazynu, poprosi o wprowadzenie ści
 
 Wybranie magazynu kluczy rozszerzy widziane przez nas menu. Oprócz opcji wyboru magazynu kluczy/eksportu i wyświetlenia nazwy magazynu kluczy a także automatycznego sprawdzania dostępności zdefiniowanych hostów, pojawią się dodatkowe funkcje:
 
-    Wyświetl zawartość magazynu kluczy                    # Pozwala na przeglądanie aliasów znajdujących się w magazynie kluczy, a także wyświetlanie ich certyfikatów bądź usuwanie ich z magazynu,
+    Wyświetl zawartość magazynu kluczy
+
+Pozwala na przeglądanie aliasów znajdujących się w magazynie kluczy, a także wyświetlanie ich certyfikatów bądź usuwanie ich z magazynu,
     
-    Zaimportuj certyfikaty do magazynu kluczy             # Importuje wszystkie pliki .crt z podkatalogu <nazwa keystore>_certs do wybranego magazynu kluczy,
+    Zaimportuj certyfikaty do magazynu kluczy
     
-    Wygeneruj nowe certyfikaty self-signed                # WYMAGA OPENSSL: pozwala generować certyfikaty self-signed. wymaga co najmniej jednego pliku <alias>.cnf w katalogu ./certs/domains_cnf.
-                                                                            klucz, certyfikat oraz magazyn .p12 zostaną umieszczone w ./certs/<nazwa magazynu kluczy>_certs,
+Importuje wszystkie pliki .crt z podkatalogu <nazwa magazynu kluczy>_certs do wybranego magazynu kluczy,
     
-    Wybierz plik magazynu kluczy                          # Pozwala na zmianę magazynu, na którym operujemy,
+    Wygeneruj nowe certyfikaty self-signed
+
+WYMAGA OPENSSL: pozwala generować certyfikaty self-signed. wymaga co najmniej jednego pliku <alias>.cnf w katalogu ./certs/domains_cnf.
+                Klucz, certyfikat oraz magazyn .p12 zostaną umieszczone w ./certs/<nazwa magazynu kluczy>_certs,
     
-    Wyeksportuj i użyj lokalnego magazynu kluczy          # WYMAGA JDK:  Pozwala na eksport pliku cacerts do katalogu ./keystores i nadanie mu przyjaznej nazwy,
+    Wybierz plik magazynu kluczy
     
-    Wykonaj zdalną aktualizację magazynów kluczy          # JEŻELI MAMY ZDEFINIOWANY CO NAJMNIEJ 1 HOST DOCELOWY: Pozwala na przesłanie na hosta zdalnego magazynu kluczy i zaimportowanie go, 
-                                                                                                                  a także przesłanie pliku PKCS12 i umieszczenie go w predefiniowanym przez nas
-                                                                                                                  katalogu.
+Pozwala na zmianę magazynu, na którym operujemy,
     
-    Hosty docelowe                                        # Umożliwia modyfikację (dodawanie, usuwanie, edycję) zdalnych hostów docelowych. te hosty przypisane będą do obecnie wybranego magazynu kluczy
-                                                            i na nie ten magazyn zostanie przesłany i zaimportowany (wraz z magazynami PKCS jeżeli takie istnieją).
+    Wyeksportuj i użyj lokalnego magazynu kluczy
+
+WYMAGA JDK:  Pozwala na eksport pliku cacerts do katalogu ./keystores i nadanie mu przyjaznej nazwy,
+    
+    Wykonaj zdalną aktualizację magazynów kluczy
+
+JEŻELI MAMY ZDEFINIOWANY CO NAJMNIEJ 1 HOST DOCELOWY: Pozwala na przesłanie na hosta zdalnego magazynu kluczy i zaimportowanie go, 
+                                                      a także przesłanie pliku PKCS12 i umieszczenie go w predefiniowanym przez nas
+                                                      katalogu.
+    
+    Hosty docelowe
+
+Umożliwia modyfikację (dodawanie, usuwanie, edycję) zdalnych hostów docelowych. te hosty przypisane będą do obecnie wybranego magazynu kluczy
+i na nie ten magazyn zostanie przesłany i zaimportowany (wraz z magazynami PKCS jeżeli takie istnieją).
                                                             
-    Zmień sól                                             # Pozwala na zmianę soli kryptograficznej wykorzystywanej w szyfrowaniu haseł w plikach.json 
-                                                            UWAGA: zmiana soli po zdefiniowaniu hostów uniemożliwi połączenie z nimi. Jeżeli chcemy wzmocnić zabezpieczenie naszych danych 
-                                                            w plikach konfiguracyjnych, należy to zrobić przed definiowaniem hostów przypisanych do danego magazynu kluczy.
+    Zmień sól
 
-    [r] - Odśwież status połączenia                       # Tylko jeśli mamy zdefiniowanego co najmniej jednego hosta docelowego - ponownie odpyta o dostępność każdego zdefiniowanego hosta docelowego.
+Pozwala na zmianę soli kryptograficznej wykorzystywanej w szyfrowaniu haseł w plikach.json.
+UWAGA: zmiana soli po zdefiniowaniu hostów uniemożliwi połączenie z nimi. Jeżeli chcemy wzmocnić zabezpieczenie naszych danych 
+w plikach konfiguracyjnych, należy to zrobić przed definiowaniem hostów przypisanych do danego magazynu kluczy.
 
-    [q] - Zakończ                                         # Kończy pracę programu.
+    [r] - Odśwież status połączenia
+
+JEŻELI MAMY ZDEFINIOWANY CO NAJMNIEJ 1 HOST DOCELOWY: ponownie odpyta o dostępność każdego zdefiniowanego hosta docelowego.
+
+    [q] - Zakończ
+
+Kończy pracę programu.
 
 
 
