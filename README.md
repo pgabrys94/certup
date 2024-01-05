@@ -7,6 +7,8 @@ Dodatkowo, umożliwia transfer plików PKCS (.p12) oraz przeniesienie ich do okr
 a także zdalne wykonanie poleceń.
 Obsługa za pomocą tekstowego interfejsu użytkownika (TUI).
 
+Do programu dołączone są pliki testowe (test pack) umożliwiające sprawdzenie jego działania.
+
 Wymagania:
 
     pip install pyjks cryptography conson paramiko
