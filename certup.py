@@ -12,37 +12,36 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 
-# Informacje
+# Info
 name = "CertUp"
 version = 1.27
 author = "PG/DASiUS"  # https://github.com/pgabrys94
 
-# Zmienne globalne:
-ksdir = os.path.join(os.getcwd(), "keystores")  # Ścieżka do katalogu magazynów kluczy.
-ksfile = ""  # Nazwa wybranego magazynu kluczy, na którym operujemy.
-ksfilefp = ""  # Ścieżka absolutna do wybranego magazynu kluczy.
-certdir = os.path.join(os.getcwd(), "certs")  # Ścieżka do katalogu certyfikatów.
-certcnfdir = os.path.join(certdir, "domains_cnf")  # Ścieżka plików konfiguracyjnych dla generatora certyfikatów.
-datadir = os.path.join(os.getcwd(), "configs")  # Ścieżka do plików konfiguracyjnych.
-datafile = None  # Nazwa pliku konfiguracyjnego - oparta o nazwę magazynu kluczy.
-datafilefp = ""  # Ścieżka absolutna do pliku konfiguracyjnego.
-pkcsfiles = {}  # Ścieżki do plików PKCS przypisanych do poszczególnych hostów.
-setup = False  # Flaga pierwszego wyboru pliku konfiguracyjnego, wykorzystywana w menu.
-error = ""  # Pozwala na przechowywanie błędu przy nieosiągalnym hoście docelowym.
-keystore_pwd = ""  # Hasło magazynu kluczy.
-# Lista powtarzających się wartości w menu.
+# Global variables:
+ksdir = os.path.join(os.getcwd(), "keystores")  # Keystores directory path.
+ksfile = ""  # Name of keystore under operation.
+ksfilefp = ""  # Chosen keystore file absolute path.
+certdir = os.path.join(os.getcwd(), "certs")  # Certificate directory path.
+certcnfdir = os.path.join(certdir, "domains_cnf")  # Configuration files directory path for SSL certificate generator.
+datadir = os.path.join(os.getcwd(), "configs")  # Config files directory path.
+datafile = None  # Config file name based on keystore name.
+datafilefp = ""  # Absolute path to configuration file.
+pkcsfiles = {}  # Paths to PKC stores associated with certain hosts.
+setup = False  # Flag - first choice of config.
+error = ""  # Variable holding content about "host unreachable" error exception.
+keystore_pwd = ""  # Keystore password.
 uni_val = ["IP", "Port", "Login", "Hasło", "Hasło sudo", "Komendy", "Ścieżka absolutna katalogu PKCS"]
-conn_status = {}  # Przechowuje informację o statusie połączenia poszczególnych hostów.
-host_status_fresh = False  # Flaga odświeżania statusu połączenia z hostami zdalnymi.
+# List of repeating menu options.
+conn_status = {}  # Holds connection status of hosts.
+host_status_fresh = False  # Flag - refreshing host connection status
 
-# Utworzenie instancji klasy parametrów.
+# Creating config data instance.
 data = Conson()
 
 
 class Remote:
     """
-    Klasa tworząca obiekty do manipulacji zdalnym hostem. Atrybutami instancji takiej klasy są dane zawarte
-    w słowniku parametrów instancji conson.
+    Class creating objects for remote host manipulation. Attributes are data created with conson class instance.
     """
 
     def __init__(self, hostname, ip, port, login, pwd, sudopwd, command_list, verbose=False):
@@ -63,7 +62,7 @@ class Remote:
 
     def connect(self):
         """
-        Metoda otwierająca połączenie SSH pomiędzy hostem źródłowym a docelowym.
+        Method for SSH connection initiation.
         :return:
         """
         try:
@@ -77,7 +76,7 @@ class Remote:
 
     def disconnect(self):
         """
-        Zamykanie połączenia między hostami.
+        Closing connection.
         :return:
         """
         self.terminal.close()
@@ -88,9 +87,8 @@ class Remote:
 
     def locate(self, path):
         """
-        Lokalizowanie ścieżki zdalnej. Wykorzystywane przy sprawdzaniu poprawności scieżki docelowej
-        pliku PKCS na hoście docelowym.
-        :param path: Ścieżka absolutna do katalogu.
+        Locate remote path. Used for PKCS storage path validation on target host.
+        :param path: Absolute path PKCS storage directory.
         :return: Boolean
         """
         with self.terminal.open_sftp() as sftp:
@@ -98,7 +96,7 @@ class Remote:
 
     def go_sudo(self, command):
         """
-        Wykonywanie polecenia z uprawnieniami administratora, jeżeli zalogowano do konta innego niż root.
+        Execution with sudo, if user is not root.
         """
         try:
             self.terminal.exec_command(f'echo {self.sudopwd} | sudo -S {command}')
@@ -110,7 +108,7 @@ class Remote:
 
     def create_tree(self):
         """
-        Metoda tworząca strukturę katalogów na hoście docelowym.
+        Creating directory tree on target host.
         :return:
         """
         with self.terminal.open_sftp() as sftp:
@@ -133,9 +131,9 @@ class Remote:
 
     def import_jks(self, srcpwd, destpwd):
         """
-        Metoda wykonująca komendę importowania przesłanego magazynu kluczy do lokalnego magazynu na hoście docelowym.
-        :param srcpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
-        :param destpwd: Hasło do otwarcia magazynu kluczy, domyślnie "changeit".
+        Importing delivered JKS to local ca_certs keystore on target host
+        :param srcpwd: Source keystore password, default "changeit".
+        :param destpwd: Destination keystore password, default "changeit".
         :return:
         """
         path = os.path.join(self.path, 'cacerts').replace("\\", "/")
@@ -157,7 +155,7 @@ class Remote:
 
     def run(self):
         """
-        Metoda wykonywania komend na hoście zdalnym.
+        Method for executing commands on remote hosts.
         :return:
         """
         if self.commands:
@@ -176,16 +174,15 @@ class Remote:
 
     def upload(self, file, filename="cacerts"):
         """
-        Metoda odpowiedzialna za przesyłanie magazynu kluczy do hosta zdalnego
-        oraz weryfikację plików za pomocą funkcji MD5.
-        :param file: Pełna ścieżka do pliku magazynu kluczy.
-        :param filename: domyślnie="cacerts" -> Nazwa pliku docelowego na hoście zdalnym.
+        Keystore transmission method with MD5 hash check.
+        :param file: Keystore fullpath.
+        :param filename: default="cacerts" -> Remote host filename.
         """
         try:
             if self.verbose:
                 print("Wysyłanie...")
 
-            #   Sprawdzanie hash MD5 pliku źródłowego:
+            #   Checking source file MD5 hash:
             md5source = hashlib.md5()
             with open(file, "rb") as sf:
                 while chunk := sf.read(8192):
@@ -193,7 +190,7 @@ class Remote:
             sftp = self.terminal.open_sftp()
             sftp.put(file, os.path.join(self.path, filename).replace("\\", "/"))
 
-            #   Sprawdzanie hash MD5 pliku docelowego (przesłanego):
+            #   Checking target file MD5 hash:
             md5target = hashlib.md5()
             with sftp.file(os.path.join(self.path, filename).replace("\\", "/"), "rb") as targetfile:
                 while chunk := targetfile.read(8192):
@@ -204,7 +201,7 @@ class Remote:
                 print("{}Wysłano: {}:{}{}".format(green, reset, self.ip,
                                                   os.path.join(self.path, filename).replace("\\", "/")))
 
-            #   Porównanie wartości hash MD5 obu plików, w przypadku braku zgodności cała operacja zostanie przerwana.
+            #   Comparing both hashes. If hashes are not equal - abort operation.
             if md5source.hexdigest() != md5target.hexdigest():
                 raise Exception("{}Błąd weryfikacji MD5{}".format(red, reset))
             else:
@@ -221,8 +218,8 @@ class Remote:
 
 def clean(ex=False):
     """
-    Funkcja czyszcząca okno konsoli podczas poruszania się po interfejsie CLI i wstawiająca nagłówek z nazwą programu.
-    :param ex: Bool -> czy funkcja zostaje wywołana podczas zakończenia programu. PRAWDA: nagłówek nie zostanie dodany.
+    TUI window cleaning function with header printing.
+    :param ex: Boolean -> is function executed on exit. True: no header printed.
     :return:
     """
     system = os.name
@@ -238,8 +235,8 @@ def clean(ex=False):
 
 def clean_decor(func):
     """
-    Dekorator funkcji.
-    :param func: Funkcja
+    Decorator for cleaning function.
+    :param func: function
     :return:
     """
 
@@ -253,18 +250,18 @@ def clean_decor(func):
 @clean_decor
 def up_ks():
     """
-    Funkcja zdalnej aktualizacji hostów docelowych.
+    Remote target update.
     """
 
     def execute(target, host):
         """
-        Wywołanie funkcji na wyznaczonym hoście.
+        Function execution on designated host.
         """
         target.connect()
         target.create_tree()
         try:
             target.upload(ksfilefp)
-            if target.error:  # Przerywa wykonywanie operacji w razie wystąpienia błędu, np. niezgodności hashów MD5.
+            if target.error:  # Abort if error is raised, e.g. MD5 sourca and target file hashes not being equal.
                 raise Exception("{}Błąd krytyczny, operacja przerwana{}".format(red, reset))
             if host in list(pkcsfiles) and len(pkcsfiles[host]) > 0:
                 if os.path.exists(pkcsfiles[host]) and data()[host][6] != "":
@@ -294,7 +291,7 @@ def up_ks():
 
     def up_single(host):
         """
-        Funkcja aktualizacji pojedyńczego hosta.
+        Update single chosen host.
         """
         target = Remote(host, data()[host][0], data()[host][1], data()[host][2],
                         data.unveil(data()[host][3]), data.unveil(data()[host][4]), data()[host][5], True)
@@ -307,7 +304,7 @@ def up_ks():
     @clean_decor
     def up_all():
         """
-        Funkcja aktualizacji wszystkich dostępnych hostów.
+        Update all available hosts.
         """
         try:
             for key, value in data().items():
@@ -326,7 +323,7 @@ def up_ks():
     @clean_decor
     def choose_target():
         """
-        Funkcja menu wyboru hosta docelowego.
+        Target host choice menu.
         """
         choosing_host = True
         while choosing_host:
@@ -385,14 +382,14 @@ def up_ks():
 @clean_decor
 def share_ks():
     """
-    Funkcja eksportu magazynu kluczy z hosta źródłowego.
+    Key extraction from local keystore.
     :return:
     """
 
     def locate_java_ks():
         """
-        Funkcja ustalająca ścieżkę magazynu kluczy Java.
-        :return: String or False -> Zwraca kompletną ścieżkę lub FAŁSZ
+        Define JKS file path.
+        :return: String or False -> Fullpath or False
         """
         try:
             raw_request = subprocess.Popen(
@@ -459,7 +456,7 @@ def share_ks():
 @clean_decor
 def ls_ks():
     """
-    Funkcja menu wyświetlania zawartości magazynu kluczy.
+    Print keystore content.
     :return:
     """
     global keystore_pwd
@@ -467,8 +464,8 @@ def ls_ks():
 
     def print_aliases(keystore):
         """
-        Wyświetl wszystkie aliasy w magazynie kluczy.
-        :param keystore: Zawartość magazynu kluczy.
+        Print all aliases in keystore.
+        :param keystore: keystore
         :return:
         """
         result = ""
@@ -483,13 +480,13 @@ def ls_ks():
 
     def print_certificate(keystore):
         """
-        Wyświetl klucz certyfikatu i datę jego utworzenia.
+        Print certificate and its creation date.
         :return:
         """
 
         def decode_date(code):
             """
-            Odczytywanie daty utworzenia certyfikatu.
+            Reading creation date.
             """
             cert_data = code.cert
             x509_cert = x509.load_der_x509_certificate(cert_data, default_backend())
@@ -526,7 +523,7 @@ def ls_ks():
     @clean_decor
     def delete_cert(keystore):
         """
-        Funkcja usuwająca certyfikaty z magazynu kluczy.
+        Remove certificate from keystore.
         """
         alias_inp = input("Podaj nazwy certyfikatów oddzielone spacją ([enter] - powrót): ")
         try:
@@ -607,7 +604,7 @@ def ls_ks():
 
 def check_structure():
     """
-    Funkcja tworząca strukturę katalogów w przypadku jej braku na hoście źródłowym.
+    Create directory tree on local host if none existing.
     :return:
     """
     need_restart = False
@@ -630,7 +627,7 @@ def check_structure():
 
 def jdk_present():
     """
-    Funkcja sprawdzająca obecność Java Development Kit na hoście źródłowym.
+    Check for Java Development Kit on local host.
     :return:
     """
     try:
@@ -644,7 +641,7 @@ def jdk_present():
 
 def openssl_present():
     """
-    Funkcja sprawdzająca obecność openssl na hoście źródłowym.
+    Check for openssl on local host.
     """
     try:
         result = subprocess.check_output(["openssl", "version"], stderr=subprocess.STDOUT, text=True)
@@ -656,8 +653,8 @@ def openssl_present():
 
 def connection_ok(host):
     """
-    Healthcheck dla połączenia z hostami docelowymi.
-    :param host: String -> nazwa hosta będąca kluczem parametru instancji conson.
+    Target hosts connection healthcheck.
+    :param host: String -> conson instance key - target host name.
     :return:
     """
     global error
@@ -688,7 +685,7 @@ def connection_ok(host):
 @clean_decor
 def select_keystore():
     """
-    Funkcja menu wyboru magazynu kluczy z listy plików w folderze ./keystores
+    Menu function for choosing keystore file from ./keystores directory
     :return:
     """
     global ksfile
@@ -742,15 +739,14 @@ def select_keystore():
 
 def get_config():
     """
-    Funkcja wczytująca istniejący plik konfiguracyjny przypisany do magazynu kluczy LUB tworząca pusty plik
-     w formacie: <nazwa magazynu>.json
-     Tworzy także dodatkowe niezbędne struktury katalogów, jeżeli ich brak..
+     Load existing configuration file designated for keystore file OR create empty config template as <keystore>.json
+     Also, creates missing directories if needed.
     :return:
     """
 
     def get_pkcs_names():
         """
-        Funkcja definiująca ścieżki do plików PKCS celem ich późniejszego przesłania na host docelowy.
+        Defining PKCS files paths for subsequent transmission.
         """
         global pkcsfiles
         for hostname in list(data()):
@@ -760,7 +756,7 @@ def get_config():
             except Exception:
                 pkcsfiles[hostname] = ""
 
-    json_structure_updated = False  # Flaga wskazująca na dopisanie brakujących miejsc na parametry do .json
+    json_structure_updated = False  # Flag - added missing parameters to .json file
     if not os.path.exists(datafilefp):
         data.save()
     if not os.path.exists(os.path.join(certdir, f"{ksfile}_certs").replace("\\", "/")):
@@ -769,7 +765,7 @@ def get_config():
         data.dump()
         data.load()
         get_pkcs_names()
-        # Sprawdzanie i aktualizacja struktury już istniejącego pliku konfiguracyjnego.
+        # Checking and updating already existing config file.
         for key, val in data().items():
             current_values = val
             while len(current_values) < len(uni_val):
@@ -792,11 +788,11 @@ def get_config():
 
 @clean_decor
 def salt_edit():
-    global host_status_fresh
     """
-    Edycja wartości soli kryptograficznej.
+    Cryptographic salt modification.
     :return:
     """
+    global host_status_fresh
     new_salt = input("Wprowadź sól (domyślnie: ch4ng3M3pl3453): ")
     if new_salt == "":
         print(cancel)
@@ -811,7 +807,7 @@ def salt_edit():
 @clean_decor
 def target_hosts():
     """
-    Funkcja menu hostów docelowych.
+    Target hosts menu.
     :return:
     """
     choosing = True
@@ -819,8 +815,8 @@ def target_hosts():
     @clean_decor
     def new_value(val):
         """
-        Funkcja dodawania nowej wartości parametru.
-        :param val: String -> wartość właściwa dla określonego parametru.
+        Adding new parameter value.
+        :param val: String -> value proper for certain parameter.
         :return:
         """
         while True:
@@ -862,7 +858,7 @@ def target_hosts():
     @clean_decor
     def add_host():
         """
-        Funkcja dodająca nowe hosty docelowe do pliku konfiguracyjnego przypisanego do magazynu kluczy.
+        Adding new target hosts to config file assigned to keystore.
         :return:
         """
         global host_status_fresh
@@ -892,8 +888,8 @@ def target_hosts():
     @clean_decor
     def edit_host(host_key):
         """
-        Funkcja edytowania parametrów (wartości) przypisanych do hosta (klucza).
-        :param host_key: String -> klucz odpowiadający przyjaznej nazwie hosta.
+        Modifying (values) assigned to host (key).
+        :param host_key: String -> host 'friendly' name.
         :return:
         """
         global host_status_fresh
@@ -937,8 +933,8 @@ def target_hosts():
     @clean_decor
     def delete_host(host_key):
         """
-        Usuń dane hosta z konfiguracji.
-        :param host_key: String -> klucz odpowiadający przyjaznej nazwie hosta.
+        Remove host data from configuration.
+        :param host_key: String -> host 'friendly' name.
         :return:
         """
         print(key)
@@ -996,7 +992,7 @@ def target_hosts():
 
 def refresh_all_statuses(outdated=False):
     """
-    Funkcja sprawdzająca, czy host odpowiada po przedłożeniu poświadczeń.
+    Checking if hosts respond to authorization.
     """
     global host_status_fresh
     if outdated:
@@ -1014,6 +1010,10 @@ def refresh_all_statuses(outdated=False):
 
 @clean_decor
 def ss_cert_gen():
+    """
+    SSL certificate generator.
+    :return:
+    """
     try:
         print("""
 UWAGA: pliki o nazwie 'domain.cnf' zostaną automatycznie pominięte.
@@ -1081,7 +1081,7 @@ Należy nadać im przyjazną nazwę, np. moja_domena.cnf
 @clean_decor
 def cert_into_ks():
     """
-    Funkcja importowania certyfikatów do magazynu kluczy.
+    Function for SSL certificates import to keystore.
     """
 
     def proceed():
@@ -1156,7 +1156,7 @@ Kontynuować?
             print(try_again)
 
 
-# Narzędzia formatowania tekstu
+# Text formatting tools
 green = "\033[92m"
 red = "\033[91m"
 blue = "\033[94m"
@@ -1167,7 +1167,7 @@ separator = "-" * len(welcome)
 cancel = "\n{}POWRÓT...{}".format(blue, reset)
 try_again = "\n{}{}SPRÓBUJ PONOWNIE...{}".format(clean(), red, reset)
 
-# Menu główne
+# Main menu
 if check_structure():
     exit()
 
@@ -1184,7 +1184,7 @@ menu_full = {
     "Wygeneruj nowe certyfikaty self-signed": ss_cert_gen
 }
 
-# Sprawdź, czy magazyn kluczy został wybrany. PRAWDA: Wyświetl nazwę pliku magazynu kluczy.
+# Check if keystore has been chosen. True: Print keystore file name.
 running = True
 while running:
     clean()
@@ -1208,7 +1208,7 @@ while running:
             if list(menu_full)[4] not in menu:
                 menu.insert(2, list(menu_full)[4])
 
-    # Sprawdź, czy zdefiniowane są hosty docelowe w pliku konfiguracyjnym. PRAWDA: wyświetl status połączenia z hostami.
+    # Check if config file contains target host data. True: show host connection status.
     if len(list(data())) > 0:
         refresh_all_statuses()
         print("\nSTATUS POŁĄCZENIA:\n")
