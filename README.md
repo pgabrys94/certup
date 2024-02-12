@@ -1,95 +1,100 @@
 CertUp
 -----------------------------------------------------------------------------------------------------------------------
 
-Program do obsługi certyfikatów SSL w magazynach Java KeyStore na wielu zdalnych hostach docelowych.
-Umożliwia odczyt i modyfikację magazynu kluczy JKS, a jego głównym zamysłem jest modyfikacja magazynu cacerts.
-Dodatkowo, umożliwia transfer plików PKCS (.p12) oraz przeniesienie ich do określonego katalogu na hoście docelowym,
-a także zdalne wykonanie poleceń.
-Obsługa za pomocą tekstowego interfejsu użytkownika (TUI).
+CertUp is a program for managing Java KeyStore (JKS) SSL certificates on multiple remote hosts. It enables reading 
+and modification of JKS, primarily for handling the cacerts keystore. 
+Additionally, it allows for PKCS (.p12) file transfer to a remote directory and remote command execution.
 
-Do programu dołączone są pliki testowe (test pack) umożliwiające sprawdzenie jego działania.
+The program operates through a text-based user interface (TUI).
 
-Wymagania:
+Requirements:
 
     pip install pyjks cryptography conson paramiko
 
-Do modyfikacji na hoście źródłowym wykorzystuje moduł pyjks wraz z modułem cryptography. 
-Modyfikacja na hostach zdalnych odbywa się natywnie poprzez wykonywanie komend programu Keytool za pomocą modułu subprocess.
+Modification on the source host uses the pyjks module along with the cryptography module. 
+Modification on remote hosts occurs natively through the execution of Keytool commands using the subprocess module.
 
-Wykorzystuje moduł conson do bezpiecznego przechowywania konfiguracji w plikach json i paramiko do nawiązywania połączeń.
+It utilizes the conson module for secure configuration storage in JSON files and paramiko for establishing connections.
 
-Funkcjonalności:
+Features:
 
-    -eksport istniejącego na hoście źródłowym magazynu kluczy JKS do programu (wymaga JDK),
-    -modyfikacja magazynu kluczy JKS,
-    -generowanie certyfikatów SSL self-signed (klucz, certyfikat, PKCS12) (wymaga openssl),
-    -wyświetlanie aliasów, dat utworzenia, treści certyfikatów,
-    -importowanie certyfikatów do keystore,
-    -przesyłanie magazynów JKS i PKCS do hostów zdalnych za pomocą SSH,
-    -weryfikacja przesłanych plików poprzez porównanie hashów MD5,
-    -przechowywanie konfiguracji hostów zdalnych przypisanych do danego magazynu kluczy,
-    -bezpieczne przechowywanie haseł do hostów zdalnych (szyfrowanie SHA-256, przypisanie pliku konfiguracyjnego do hosta źródłowego, możliwość zastosowania soli).
+    - Export of an existing JKS keystore from the source host (requires JDK),
+    - Modification of JKS keystore,
+    - Generation of self-signed SSL certificates (key, certificate, PKCS12) (requires openssl),
+    - Displaying aliases, creation dates, and certificate contents,
+    - Importing certificates into the keystore,
+    - Transfer of JKS and PKCS stores to remote hosts via SSH,
+    - Verification of transferred files through MD5 hash comparison,
+    - Storage of configurations for remote hosts assigned to a specific keystore,
+    - Secure storage of passwords for remote hosts (SHA-256 encryption, assignment of a configuration file 
+        to the source host, option to apply cryptographic salt).
 
-Działanie:
 
-Pierwsze uruchomienie programu utworzy strukturę katalogów a następnie wymusi na użytkowniku ponowne uruchomienie.
+Operation:
 
-    ./configs            # Katalog plików konfiguracyjnych przechowujących dane hostów,
-    ./keystores          # Katalog magazynów kluczy, na których będziemy wykonywać operacje,
-    ./certs              # Katalog przechowujący certyfikaty oraz pliki PKCS. Będą tworzone podkatalogi <nazwa keystore>_certs w momencie wybrania certyfikatu z pozycji menu.
-    ./certs/domains.cnf  # Katalog dla plików <alias>.cnf celem generowania certyfikatów self-signed (klucz, certyfikat, PKCS12).
+The first program run creates a directory structure and then forces the user to restart.
 
-Przy kolejnym uruchomieniu pojawi się menu wyboru magazynu kluczy. Jeżeli w folderze ./keystores nie ma żadnego magazynu a program wykryje instancję JDK w systemie, 
-umożliwi on wyeksportowanie do tego katalogu oryginalnego magazynu kluczy cacerts i nadanie mu przyjaznej nazwy (dla celów identyfikacji). 
-Jeżeli nie będzie w stanie zlokalizować magazynu, poprosi o wprowadzenie ścieżki do pliku cacerts. 
+    ./configs            # Directory for configuration files storing host data,
+    ./keystores          # Directory for keystore operations,
+    ./certs              # Directory for storing certificates and PKCS files. Subdirectories <keystore name>_certs will be created when selecting a certificate from the menu.
+    ./certs/domains.cnf  # Directory for <alias>.cnf files for generating self-signed certificates (key, certificate, PKCS12).
 
-Wybranie magazynu kluczy rozszerzy widziane przez nas menu. Oprócz opcji wyboru magazynu kluczy/eksportu i wyświetlenia nazwy magazynu kluczy a także automatycznego sprawdzania dostępności zdefiniowanych hostów, pojawią się dodatkowe funkcje:
+
+On subsequent runs, a keystore selection menu will appear. If there is no keystore in the ./keystores folder 
+and the program detects a JDK instance in the system, it allows exporting the original cacerts keystore to this directory 
+and giving it a friendly name (for identification purposes). If it cannot locate the keystore, it will prompt 
+for the path to the cacerts file.
+
+Selecting a keystore will expand the menu. In addition to the options for selecting a keystore/exporting and displaying 
+the keystore name and automatically checking the availability of defined hosts, additional functions will appear:
 
     Wyświetl zawartość magazynu kluczy
 
-Pozwala na przeglądanie aliasów znajdujących się w magazynie kluczy, a także wyświetlanie ich certyfikatów bądź usuwanie ich z magazynu,
+Allows browsing aliases in the keystore, displaying their certificates, or removing them from the keystore,
     
     Zaimportuj certyfikaty do magazynu kluczy
     
-Importuje wszystkie pliki .crt z podkatalogu <nazwa magazynu kluczy>_certs do wybranego magazynu kluczy,
+Imports all .crt files from the <keystore name>_certs subdirectory into the selected keystore,
     
     Wygeneruj nowe certyfikaty self-signed
 
-WYMAGA OPENSSL: pozwala generować certyfikaty self-signed. wymaga co najmniej jednego pliku <alias>.cnf w katalogu ./certs/domains_cnf.
-                Klucz, certyfikat oraz magazyn .p12 zostaną umieszczone w ./certs/<nazwa magazynu kluczy>_certs,
+REQUIRES OPENSSL: allows generating self-signed certificates. 
+Requires at least one <alias>.cnf file in the ./certs/domains_cnf directory.
+The key, certificate, and .p12 store will be placed in ./certs/<keystore name>_certs,
     
     Wybierz plik magazynu kluczy
     
-Pozwala na zmianę magazynu, na którym operujemy,
+Allows changing the keystore on which you operate,
     
     Wyeksportuj i użyj lokalnego magazynu kluczy
 
-WYMAGA JDK:  Pozwala na eksport pliku cacerts do katalogu ./keystores i nadanie mu przyjaznej nazwy,
+REQUIRES JDK: Allows exporting the cacerts file to the ./keystores directory and giving it a friendly name,
     
     Wykonaj zdalną aktualizację magazynów kluczy
 
-JEŻELI MAMY ZDEFINIOWANY CO NAJMNIEJ 1 HOST DOCELOWY: Pozwala na przesłanie na hosta zdalnego magazynu kluczy i zaimportowanie go, 
-                                                      a także przesłanie pliku PKCS12 i umieszczenie go w predefiniowanym przez nas
-                                                      katalogu.
+IF AT LEAST 1 TARGET HOST IS DEFINED: Allows transferring the keystore to a remote host and importing it, 
+                                      as well as transferring the PKCS12 file and placing it in a directory 
+                                      predefined by us.
     
     Hosty docelowe
 
-Umożliwia modyfikację (dodawanie, usuwanie, edycję) zdalnych hostów docelowych. te hosty przypisane będą do obecnie wybranego magazynu kluczy
-i na nie ten magazyn zostanie przesłany i zaimportowany (wraz z magazynami PKCS jeżeli takie istnieją).
+Allows modification (addition, removal, editing) of remote target hosts. These hosts will be assigned to the 
+currently selected keystore, and the keystore will be transferred and imported (along with PKCS stores if they exist).
                                                             
     Zmień sól
 
-Pozwala na zmianę soli kryptograficznej wykorzystywanej w szyfrowaniu haseł w plikach.json.
-UWAGA: zmiana soli po zdefiniowaniu hostów uniemożliwi połączenie z nimi. Jeżeli chcemy wzmocnić zabezpieczenie naszych danych 
-w plikach konfiguracyjnych, należy to zrobić przed definiowaniem hostów przypisanych do danego magazynu kluczy.
+Allows changing the cryptographic salt used in password encryption in JSON files.
+WARNING: Changing the salt after defining hosts will prevent connection to them. 
+If you want to strengthen the security of your data in configuration files, 
+it should be done BEFORE defining hosts assigned to a specific keystore.
 
     Odśwież status połączenia
 
-JEŻELI MAMY ZDEFINIOWANY CO NAJMNIEJ 1 HOST DOCELOWY: ponownie odpyta o dostępność każdego zdefiniowanego hosta docelowego.
+IF AT LEAST 1 TARGET HOST IS DEFINED: Requeries the availability of each defined target host.
 
     Zakończ
 
-Kończy pracę programu.
+Ends the program's operation.
 
 
 
